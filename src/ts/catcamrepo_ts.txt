@@ -1,0 +1,41 @@
+export class CatCamRepo {
+
+
+    private version: number;
+
+    constructor() {
+        this.version = 42;
+    }
+
+
+    public async getServiceData<T>(
+        request: RequestInfo
+      ): Promise<T> {
+        const response = await fetch(request);
+        const body = await response.json();
+        return body;
+      }
+
+    public  getMovieList(): Array<string> {
+        let ccs = new CatCampService('http://127.0.0.1:9090/')
+    }
+
+
+    public getDataList(): Array<string> {
+        let listData = new Array<string>();
+        console.log("getDataList start");
+        listData.push('aaa');
+        listData.push('bbb');
+        listData.push('ccc');
+        listData.push('ddd');
+        listData.push('eee');
+        listData.push('fff');
+        listData.push('ggg');
+        console.log("getDataList end");
+        return(listData);
+    }
+
+    public getVersion(): number {
+        return(this.version);
+    }
+}
