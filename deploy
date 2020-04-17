@@ -1,0 +1,2 @@
+cp -R ~/dev/workspaces/eclipse_2019_09/piexp_git/src/main/resources/static/*
+cp -R dist/* ~/dev/workspaces/eclipse_2019_09/piexp_git/src/main/resources/static/
