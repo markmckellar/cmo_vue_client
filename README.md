@@ -1,3 +1,8 @@
+npm -v;node -v
+5.6.0
+v8.10.0
+
+
 # cat-cam
 
 ## Project setup
