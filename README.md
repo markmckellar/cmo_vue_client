@@ -2,6 +2,12 @@ npm -v;node -v
 5.6.0
 v8.10.0
 
+nvm install v8.10.0
+nvm use v8.10.0 
+
+npm install
+npm run serve
+
 
 # cat-cam
 
