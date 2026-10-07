@@ -144,7 +144,7 @@ public getChartOptions(meEVent:MeEvent):any {
 
   public getMovieSrc():string {
     let meEvent = this.meEvent;
-    let url = `http://192.168.1.177:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
+    let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
     return(url);
     }
 }

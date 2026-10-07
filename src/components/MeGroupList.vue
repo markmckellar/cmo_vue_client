@@ -44,7 +44,7 @@ export default class MeGroupList extends Vue {
   public geMeGroupList(): MeGroup[] {
     
     const self = this;
-    new CatCamServices('http://192.168.1.177:9090/').getMeGroupList().then((meGroupList) => {
+    new CatCamServices('http://173.255.215.223:9090/').getMeGroupList().then((meGroupList) => {
         self.fileList = meGroupList;
         console.log("geMeGroupList="+JSON.stringify(meGroupList));
        } );

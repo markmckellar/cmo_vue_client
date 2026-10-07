@@ -72,7 +72,7 @@ public getSelectedMeEventGroup():string {
     const self = this;
     
     console.log(`geMeEventGroupList meGroup=${this.meGroupText}`);
-    if(this.meGroupText) new CatCamServices('http://192.168.1.177:9090/').getMeEventGroupList(
+    if(this.meGroupText) new CatCamServices('http://173.255.215.223:9090/').getMeEventGroupList(
       this.meGroupText,
       this.howManyRecords).then((meEventGroupList) => {
         self.fileList = meEventGroupList;

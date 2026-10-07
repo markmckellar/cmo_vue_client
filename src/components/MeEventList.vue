@@ -31,7 +31,7 @@
 </template>
 
 <script lang="ts">
-// http://192.168.1.177:9090/catcam/data/pet_door/20200326/20200326_234655_0310/images/00000.jpg
+// http://173.255.215.223:9090/catcam/data/pet_door/20200326/20200326_234655_0310/images/00000.jpg
 //        <MeEventDetail :meEvent="getCurrentMovie()" />
 //             <img class="movie_container_overlay" src="@/assets/images/playbutton.png" />
 
@@ -202,7 +202,7 @@ export default class MeEventList extends Vue {
   }   
 
   public getRepImageSrc(meEvent:MeEvent):string {
-    let url = `http://192.168.1.177:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_rep_image}`;
+    let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_rep_image}`;
     return(url);
     }
 
@@ -211,7 +211,7 @@ export default class MeEventList extends Vue {
   } 
 
   public getMovieSrc(meEvent:MeEvent):string {
-    let url = `http://192.168.1.177:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
+    let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
     return(url);
   }
 
@@ -233,7 +233,7 @@ export default class MeEventList extends Vue {
     let returnArray = (self.fileList) ? self.fileList : new Array<MeEvent>();
 
     console.log(`geMeEventGroupList meGroup=${this.meGroupText} meGroupEvent=${this.meEventGroupText}`);
-    new CatCamServices('http://192.168.1.177:9090/').getMeEventList(
+    new CatCamServices('http://173.255.215.223:9090/').getMeEventList(
                               this.meGroupText,
                               this.meEventGroupText,
                               this.howMayRecords,

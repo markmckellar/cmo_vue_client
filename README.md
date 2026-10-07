@@ -1,3 +1,7 @@
+### Get the correct npm and node via nvm to get most recent version see : https://github.com/nvm-sh/nvm
+```
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
 npm -v;node -v
 5.6.0
 v8.10.0
@@ -7,7 +11,7 @@ nvm use v8.10.0
 
 npm install
 npm run serve
-
+```
 
 # cat-cam
 
