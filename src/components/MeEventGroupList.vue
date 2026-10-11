@@ -3,28 +3,38 @@
     <div class="group_header">
       <h2 class="group_title">{{meGroupText.replace(/_/g, " ")}}</h2>
       <div class="group_controls">
-        <form class="search" role="search" @submit.prevent="runSearch()">
-          <input class="search_input" type="search" v-model="searchText" :list="`labels-${meGroupText}`"
-            placeholder="Search all dates (cat, dog…)" enterkeyhint="search" aria-label="Search by classification">
-          <datalist :id="`labels-${meGroupText}`">
-            <option v-for="label in knownLabels" :key="label" :value="label" />
-          </datalist>
-          <button class="search_button" type="submit" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-          </button>
-        </form>
-        <label class="group_picker" :class="{ group_picker_off: searchLabel }">
-          <span class="group_picker_label">Event group</span>
+        <p class="controls_hint">Show events <b>by classification</b> across all dates, <em>or</em> pick a single <b>date</b>.</p>
+        <div class="control" :class="{ control_active: searchLabel }">
+          <span class="control_label">By classification</span>
+          <form class="search" role="search" @submit.prevent="runSearch()">
+            <input class="search_input" type="search" v-model="searchText" autocomplete="off"
+              placeholder="cat, dog, person…" enterkeyhint="search" aria-label="Search by classification"
+              @focus="showSuggestions = true" @input="showSuggestions = true" @blur="showSuggestions = false" @keydown.esc="showSuggestions = false">
+            <!-- datalist is unreliable on mobile Chrome, so the suggestions are our own list -->
+            <ul v-if="showSuggestions && suggestions.length" class="suggestions" role="listbox">
+              <li v-for="label in suggestions" :key="label" role="option">
+                <button type="button" class="suggestion" @pointerdown.prevent @click="pickLabel(label)">{{label}}</button>
+              </li>
+            </ul>
+            <button class="search_button" type="submit" aria-label="Search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            </button>
+          </form>
+        </div>
+        <span class="controls_or" aria-hidden="true">or</span>
+        <label class="control" :class="{ control_active: !searchLabel, control_off: searchLabel }">
+          <span class="control_label">By date</span>
           <select class="select" v-model="selectedMeEventGroupText" :disabled="!!searchLabel">
             <option v-for="(meEventGroup, index) in fileList" v-bind:key="index">{{meEventGroup.meEventGroup}}</option>
           </select>
+          <span v-if="searchLabel" class="control_note">Clear the search to choose a date</span>
         </label>
       </div>
     </div>
 
     <div v-if="searchLabel" class="search_banner">
-      <span>Every <b>{{searchLabel}}</b> event, all dates</span>
-      <button class="search_clear" @click="clearSearch()">Clear search</button>
+      <span>Showing every <b>{{searchLabel}}</b> event from all dates</span>
+      <button class="search_clear" @click="clearSearch()">Clear search and browse by date</button>
     </div>
 
     <MeEventList v-if="searchLabel" :meGroupText="meGroupText" meEventGroupText="" :searchLabel="searchLabel" :key="`search:${searchLabel}`" />
@@ -34,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { CatCamServices } from '../ts/catcamservices';
 import type { MeEventGroup } from '../ts/meeventgroup';
 import MeEventList from './MeEventList.vue';
@@ -53,9 +63,22 @@ const searchText = ref("");
 const searchLabel = ref("");
 // suggestions for the search box; the server matches any label ollama writes
 const knownLabels = ['cat', 'dog', 'person', 'raccoon', 'animal', 'legs'];
+const showSuggestions = ref(false);
+
+const suggestions = computed<string[]>(() => {
+  const text = searchText.value.trim().toLowerCase();
+  return knownLabels.filter((label) => label.startsWith(text) && label !== text);
+});
 
 function runSearch():void {
   searchLabel.value = searchText.value.trim().toLowerCase();
+  showSuggestions.value = false;
+}
+
+function pickLabel(label: string):void {
+  searchText.value = label;
+  runSearch();
+  (document.activeElement as HTMLElement | null)?.blur();
 }
 
 function clearSearch():void {
@@ -106,8 +129,58 @@ geMeEventGroupList();
 .group_controls {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 20px;
+  align-items: flex-end;
+  gap: 8px 16px;
+}
+
+.controls_hint {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.controls_hint b {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.controls_or {
+  padding-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  transition: opacity 0.15s;
+}
+
+.control_label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.control_active .control_label {
+  color: var(--accent);
+}
+
+.control_off .select {
+  opacity: 0.4;
+}
+
+.control_note {
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .search {
@@ -161,21 +234,38 @@ geMeEventGroupList();
   outline-offset: 2px;
 }
 
-.group_picker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 10;
   margin: 0;
-  transition: opacity 0.15s;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  box-shadow: var(--shadow);
 }
 
-.group_picker_off {
-  opacity: 0.4;
+.suggestion {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  text-transform: capitalize;
 }
 
-.group_picker_label {
-  color: var(--text-muted);
-  font-size: 0.85rem;
+.suggestion:hover,
+.suggestion:focus-visible {
+  outline: none;
+  background: var(--border);
+  color: var(--accent);
 }
 
 .search_banner {
@@ -220,10 +310,21 @@ geMeEventGroupList();
 }
 
 @media (max-width: 600px) {
-  .group_controls,
+  .group_controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .control,
   .search,
-  .search_input {
+  .search_input,
+  .control .select {
     width: 100%;
+  }
+
+  .controls_or {
+    padding: 0;
+    text-align: center;
   }
 }
 </style>
