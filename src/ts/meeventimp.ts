@@ -52,6 +52,7 @@ export class MeEventImp implements MeEvent {
       public me_video_name:string;
       public me_rep_image:string;
       public me_json_name:string;
+      public me_frame_count?:number;
   
 
       constructor(meEvent:MeEvent) {
@@ -65,6 +66,7 @@ export class MeEventImp implements MeEvent {
         this.me_video_name = meEvent.me_video_name;
         this.me_rep_image = meEvent.me_rep_image;
         this.me_json_name = meEvent.me_json_name;
+        this.me_frame_count = meEvent.me_frame_count;
     }
 
 

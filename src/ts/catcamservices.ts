@@ -5,6 +5,9 @@ import type { MeEventGroup } from './meeventgroup';
 import type { MeEvent } from './meevent';
 import type { MeOllama } from './meollama';
 
+// The cmo_server to talk to. Production by default; for testing against another server, start
+// the client with e.g. VITE_CMO_SERVER=http://192.168.1.167:9090/ npm run dev
+export const CMO_SERVER: string = (import.meta.env.VITE_CMO_SERVER || 'http://173.255.215.223:9090/').replace(/\/?$/, '/');
 
 export class CatCamServices {
    public catCamUrl:string;

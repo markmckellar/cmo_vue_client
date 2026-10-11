@@ -11,8 +11,8 @@
         <div class="detail_date">{{getDateFromMeEvent(meEvent)}}</div>
         <div class="detail_stats">
           <span class="stat">{{meEvent.me_time.toFixed(1)}}s</span>
-          <span class="stat">{{meEvent.me_delta_array.length}} frames</span>
-          <span class="stat">{{ (meEvent.me_delta_array.length/meEvent.me_time).toFixed(0)}} fps</span>
+          <span class="stat">{{frameCount()}} frames</span>
+          <span class="stat">{{ (frameCount()/meEvent.me_time).toFixed(0)}} fps</span>
         </div>
       </div>
     </div>
@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import { CMO_SERVER } from '../ts/catcamservices';
 import { watch } from 'vue';
 import type { MeEvent } from '../ts/meevent';
 import { Utils } from '../ts/utils';
@@ -40,9 +41,14 @@ watch(() => props.meEvent, (newVal: MeEvent) => {
   console.log(`meEventGroupTextChanged!!v newVal=${newVal.me_name}`);
 }, { immediate: true, deep: true });
 
+// pet door events have one me_delta_array entry per frame; porch_cam sends the count instead
+function frameCount():number {
+  return(props.meEvent.me_frame_count ?? props.meEvent.me_delta_array.length);
+}
+
 function getMovieSrc():string {
   let meEvent = props.meEvent;
-  let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
+  let url = `${CMO_SERVER}catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
   return(url);
 }
 </script>
@@ -88,14 +94,16 @@ function getMovieSrc():string {
   height: 42px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff;
   pointer-events: auto;
   transition: background 0.15s;
 }
 
 .detail_close:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(40, 40, 40, 0.8);
 }
 
 .detail_close:focus-visible {
@@ -103,12 +111,18 @@ function getMovieSrc():string {
   outline-offset: 2px;
 }
 
+/* Dark backdrop so the date and stats stay readable over bright video (porch cam in daylight) */
 .detail_info {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 14px;
   min-width: 0;
+  padding: 6px 8px 6px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff;
 }
 

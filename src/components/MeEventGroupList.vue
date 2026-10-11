@@ -1,7 +1,8 @@
 <template>
   <section class="cmo_event_group">
     <div class="group_header">
-      <h2 class="group_title">{{meGroupText.replace(/_/g, " ")}}</h2>
+      <!-- MeGroupList puts its camera picker here -->
+      <slot name="title"><h2 class="group_title">{{meGroupText.replace(/_/g, " ")}}</h2></slot>
       <div class="group_controls">
         <p class="controls_hint">Show events <b>by classification</b> across all dates, <em>or</em> pick a single <b>date</b>.</p>
         <div class="control" :class="{ control_active: searchLabel }">
@@ -45,7 +46,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { CatCamServices } from '../ts/catcamservices';
+import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
 import type { MeEventGroup } from '../ts/meeventgroup';
 import MeEventList from './MeEventList.vue';
 
@@ -98,7 +99,7 @@ function getSelectedMeEventGroup():string {
 
 function geMeEventGroupList(): void {
   console.log(`geMeEventGroupList meGroup=${props.meGroupText}`);
-  if(props.meGroupText) new CatCamServices('http://173.255.215.223:9090/').getMeEventGroupList(
+  if(props.meGroupText) new CatCamServices(CMO_SERVER).getMeEventGroupList(
     props.meGroupText,
     props.howManyRecords).then((meEventGroupList) => {
       fileList.value = meEventGroupList;

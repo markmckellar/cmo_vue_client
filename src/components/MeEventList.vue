@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { CatCamServices } from '../ts/catcamservices';
+import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
 import type { MeEvent } from '../ts/meevent';
 import type { MeOllama } from '../ts/meollama';
 import { MeEventImp } from '../ts/meeventimp';
@@ -157,7 +157,7 @@ function onFullscreenChange():void {
 document.addEventListener('fullscreenchange', onFullscreenChange);
 
 function getRepImageSrc(meEvent:MeEvent):string {
-  let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_rep_image}`;
+  let url = `${CMO_SERVER}catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_rep_image}`;
   return(url);
 }
 
@@ -169,7 +169,7 @@ function getMore():void {
 
 function geMeEventList(): void {
   console.log(`geMeEventGroupList meGroup=${props.meGroupText} meGroupEvent=${props.meEventGroupText} searchLabel=${props.searchLabel}`);
-  let catCamServices = new CatCamServices('http://173.255.215.223:9090/');
+  let catCamServices = new CatCamServices(CMO_SERVER);
   // a search covers every date, so it pages by the last event received instead of by date
   let request = props.searchLabel
     ? catCamServices.searchMeEvents(
