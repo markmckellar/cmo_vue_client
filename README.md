@@ -52,7 +52,12 @@ npm run dev -- --host
 #  ➜  Network: http://192.168.1.167:8080/
 ```
 
-Even in dev, the app talks to the real server at `http://173.255.215.223:9090/`.
+Even in dev, the app talks to the real server at `http://173.255.215.223:9090/` unless you point it
+at another one, e.g. a local test server:
+
+```
+VITE_CMO_SERVER=http://192.168.1.167:9090/ npm run dev -- --host
+```
 
 Other commands:
 
@@ -105,8 +110,9 @@ or the page loads blank.
 
 ## How it talks to the server
 
-The server address `http://173.255.215.223:9090/` is written directly into the components
-(`MeGroupList.vue`, `MeEventGroupList.vue`, `MeEventList.vue`, `MeEventDetail.vue`). Change it there if the server moves.
+Every component gets the server address from `CMO_SERVER` in `src/ts/catcamservices.ts`. It is
+`http://173.255.215.223:9090/` unless `VITE_CMO_SERVER` is set when the app is run or built
+(`VITE_CMO_SERVER=http://host:9090/ npm run build`). Change the default there if the server moves.
 
 | Endpoint | Used for |
 |---|---|
