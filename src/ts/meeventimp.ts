@@ -1,5 +1,5 @@
-import { MeEvent } from './meevent';
-import { MeDelta } from './medelta';
+import type { MeEvent } from './meevent';
+import type { MeDelta } from './medelta';
 
 export class MeEventImp implements MeEvent {
 

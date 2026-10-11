@@ -1,4 +1,4 @@
-import { MeEvent } from './meevent';
+import type { MeEvent } from './meevent';
 
 export class Utils {
 

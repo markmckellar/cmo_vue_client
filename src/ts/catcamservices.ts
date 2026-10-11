@@ -1,8 +1,9 @@
 
-import { Movie } from './movie';
-import { MeGroup } from './megroup';
-import { MeEventGroup } from './meeventgroup';
-import { MeEvent } from './meevent';
+import type { Movie } from './movie';
+import type { MeGroup } from './megroup';
+import type { MeEventGroup } from './meeventgroup';
+import type { MeEvent } from './meevent';
+import type { MeOllama } from './meollama';
 
 
 export class CatCamServices {
@@ -57,6 +58,32 @@ export class CatCamServices {
     return fetch(url)
       .then((res) => res.json())
       .then((res) => res.map((meEvent: any) => this.formatMeEvent(meEvent)));
+    }
+
+  // Events on any date that ollama tagged with label (cat, dog, ...), newest first.
+  // For the next page pass the me_name of the last event received as before.
+  public searchMeEvents(
+      meGroup:string,
+      label:string,
+      howMayRecords:number,
+      minimumDuration:number,
+      before?:string): Promise<MeEvent[]> {
+    let url = `${this.catCamUrl}catcam/search/${meGroup}?label=${encodeURIComponent(label)}&howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}`;
+    if(before) url += `&before=${encodeURIComponent(before)}`;
+    console.log(`searchMeEvents:url=${url}`);
+
+    return fetch(url)
+      .then((res) => res.json())
+      .then((res) => res.map((meEvent: any) => this.formatMeEvent(meEvent)));
+    }
+
+  // Ollama's classification of the event (cat, dog, person, ...). null if the event has none.
+  public getMeOllama(meEvent:MeEvent): Promise<MeOllama|null> {
+    const url = `${this.catCamUrl}catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/me_ollama.json`;
+
+    return fetch(url)
+      .then((res) => res.ok ? res.json() : null)
+      .catch(() => null);
     }
 
   public getMeEventGroupList(meGroup:string,howMayRecords:number): Promise<MeEventGroup[]> {

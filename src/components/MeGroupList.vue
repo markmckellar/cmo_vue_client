@@ -1,73 +1,31 @@
 <template>
   <div class="cmo_source">
-      <div  v-for="(meGroup, index) in fileList" v-bind:key="index">
-
-        <div>
-          <div></div>
-          <div><MeEventGroupList :meGroupText="meGroup.meGroup"/></div>
-        </div>
-      
-      </div>
-    </div>
+    <MeEventGroupList v-for="(meGroup, index) in fileList" :key="index" :meGroupText="meGroup.meGroup" />
+  </div>
 </template>
 
-<script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator';
+<script setup lang="ts">
+import { ref } from 'vue';
 import { CatCamServices } from '../ts/catcamservices';
-import { MeGroup } from '../ts/megroup';
-// import MeEventGroupList from './components/MeEventGroupList.vue';
-// import MeEventList from './components/MeEventList.vue';
-
-// @Component({
-//   components: {
-//     MeEventGroupList,MeEventList
-//   },
-// })
+import type { MeGroup } from '../ts/megroup';
 import MeEventGroupList from './MeEventGroupList.vue';
-@Component({
-  components: {
-    MeEventGroupList
-  },
-})
-export default class MeGroupList extends Vue {
 
+const fileList = ref<MeGroup[]>([]);
 
-  public fileList = this.geMeGroupList();
-    // @Prop({default: "pet_door"}) meGroup: string = "pet_door";
-
-
-    public openMovie(meGroup:MeGroup): void {
-      // this.meGroup = meGroup.meGroup;
-    }
-
-
-  public geMeGroupList(): MeGroup[] {
-    
-    const self = this;
-    new CatCamServices('http://173.255.215.223:9090/').getMeGroupList().then((meGroupList) => {
-        self.fileList = meGroupList;
-        console.log("geMeGroupList="+JSON.stringify(meGroupList));
-       } );
-    return(new Array<MeGroup>());
-    }
+function geMeGroupList(): void {
+  new CatCamServices('http://173.255.215.223:9090/').getMeGroupList().then((meGroupList) => {
+    fileList.value = meGroupList;
+    console.log("geMeGroupList="+JSON.stringify(meGroupList));
+  });
 }
+
+geMeGroupList();
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-
 .cmo_source {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: left;  
-  color: black;
-  background-color: #ffffff;
-
-  padding: 20px;
-  border-width:1px;
-  border-style:solid;
-  border-color:black;
-  }
-
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
 </style>

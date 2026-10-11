@@ -1,4 +1,4 @@
-import { MeDelta } from './medelta';
+import type { MeDelta } from './medelta';
 
 
 

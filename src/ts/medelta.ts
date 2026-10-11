@@ -1,4 +1,4 @@
-import { Countour } from './countour';
+import type { Countour } from './countour';
 
 export interface MeDelta {
     event_time_iso:string;

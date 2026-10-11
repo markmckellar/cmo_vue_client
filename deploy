@@ -1,2 +1,28 @@
-cp -R ~/dev/workspaces/eclipse_2019_09/piexp_git/src/main/resources/static/*
-cp -R dist/* ~/dev/workspaces/eclipse_2019_09/piexp_git/src/main/resources/static/
+#!/usr/bin/env bash
+# Build the app and copy it into cmo_server, which serves it at /cmo_client/index.html.
+# Usage: ./deploy            (cmo_server checked out at ~/dev/cmo_server)
+#        CMO_SERVER=/path/to/cmo_server ./deploy
+set -e
+
+CMO_SERVER="${CMO_SERVER:-$HOME/dev/cmo_server}"
+DEST="$CMO_SERVER/src/main/resources/static/cmo_client"
+
+if [ ! -d "$CMO_SERVER/src/main/resources/static" ]; then
+  echo "cmo_server not found at $CMO_SERVER (set CMO_SERVER=...)" >&2
+  exit 1
+fi
+
+if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 22 ]; then
+  echo "need node 22 (have $(node -v 2>/dev/null || echo none)), run 'nvm use' first" >&2
+  exit 1
+fi
+
+npm run build
+
+# clear out the previous build (assets/ from Vite, js/ and css/ from the old vue-cli build); movie.html is left alone
+rm -rf "$DEST/assets" "$DEST/js" "$DEST/css" "$DEST/index.html" "$DEST/favicon.ico"
+mkdir -p "$DEST"
+cp -R dist/* "$DEST/"
+
+echo "Copied dist/ to $DEST"
+echo "Now commit cmo_server and rebuild/restart it."

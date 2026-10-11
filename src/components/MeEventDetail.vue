@@ -1,184 +1,152 @@
 <template>
-  <div class="cmo_img me_event_detail">
-    <div>{{getDateFromMeEvent(meEvent)}} -- {{meEvent.me_time.toFixed(1)}} seconds<br>
-        <video class="cmo_img" controls :src="getMovieSrc()" type="video/mp4">
+  <div class="me_event_detail">
+    <video class="detail_video" controls autoplay playsinline :src="getMovieSrc()" type="video/mp4">
       Your browser does not support the video tag.
-        </video>
-        <div class="cmo_wrap">
-          <MeEventDetailGraph  :width="600" :height="100" :data="getChartData(meEvent)" :options="getChartOptions(meEvent)" />
+    </video>
+    <div class="detail_bar">
+      <button class="detail_close" @click="emit('close')" aria-label="Close">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      </button>
+      <div class="detail_info">
+        <div class="detail_date">{{getDateFromMeEvent(meEvent)}}</div>
+        <div class="detail_stats">
+          <span class="stat">{{meEvent.me_time.toFixed(1)}}s</span>
+          <span class="stat">{{meEvent.me_delta_array.length}} frames</span>
+          <span class="stat">{{ (meEvent.me_delta_array.length/meEvent.me_time).toFixed(0)}} fps</span>
         </div>
-        <div>
-        {{meEvent.me_delta_array.length}} frames fps={{ (meEvent.me_delta_array.length/meEvent.me_time).toFixed(0)}}  
-        </div>
+      </div>
     </div>
-      
   </div>
 </template>
 
-<script lang="ts">
-
-import { Component, Prop, Watch, Vue } from 'vue-property-decorator';
-import { CatCamServices } from '../ts/catcamservices';
-import { MeEvent } from '../ts/meevent';
+<script setup lang="ts">
+import { watch } from 'vue';
+import type { MeEvent } from '../ts/meevent';
 import { Utils } from '../ts/utils';
-import MeEventDetailGraph from './MeEventDetailGraph.vue';
 
-@Component({
-  components: {
-    MeEventDetailGraph,
-  },
-})
-// @Component
-export default class MeEventDetail extends Vue {
+const props = defineProps<{
+  meEvent: MeEvent;
+}>();
 
-  @Prop() public meEvent!: MeEvent;
-  
-  public getChartData(meEvent:MeEvent):any {
+const emit = defineEmits<{
+  close: [];
+}>();
 
-    let labelData = new Array<string>();
-    let yAreaCount = new Array<number>();
-    let yAreaData = new Array<number>();
+function getDateFromMeEvent(meEvent:MeEvent):string {
+  return(new Utils().getDateFullFromMeEvent(meEvent));
+}
 
-    let maxContourArea = 0;
-    let maxContourCount = 0;
-    for (let deltaArray of meEvent.me_delta_array) {
-        
-      if(deltaArray.contours.length>maxContourCount) maxContourCount = deltaArray.contours.length;
-      
-      let tempArea = 0;
-      for (let c of deltaArray.contours) 
-        tempArea += c.h*c.h;
-      if(tempArea > maxContourArea) maxContourArea  = tempArea;
-    }
+watch(() => props.meEvent, (newVal: MeEvent) => {
+  console.log(`meEventGroupTextChanged!!v newVal=${newVal.me_name}`);
+}, { immediate: true, deep: true });
 
-    // for(let i=0;i<c.length;i++) {
-    
-    for (let deltaArray of meEvent.me_delta_array) {
-      let startDate = Date.parse(meEvent.me_delta_array[0].event_time_iso);
-      let eventDate = Date.parse(deltaArray.event_time_iso);
-      let timeLabel = eventDate-startDate;
-
-      timeLabel = Math.round(timeLabel / 1000);
-      labelData.push(timeLabel+"");
-      let area = 0;
-  
-      for (let c of deltaArray.contours) {
-        area += c.h*c.h;
-      }
-      yAreaData.push(100*area/maxContourArea);
-      yAreaCount.push(100*deltaArray.contours.length/(maxContourCount*1) );
-
-    }
-    let data = {
-        // Data to be represented on x-axis
-        labels: labelData,
-        datasets: [
-          {
-            label: 'movement area',
-            backgroundColor: '#f87979',
-            pointBackgroundColor: 'white',
-            borderWidth: 5,
-            pointBorderColor: '#249EBF',
-            // Data to be represented on y-axis
-            data: yAreaData,
-            pointRadius: 0,
-            fill: false,
-            borderColor: '#249EBF'
-
-          },
-          {
-            label: '# areas',
-            backgroundColor: '#7e7eff',
-            pointBackgroundColor: '000000',
-            borderWidth: 5,
-            pointBorderColor: '#000000',
-            // Data to be represented on y-axis
-            data: yAreaCount,
-            pointRadius: 0,
-            fill: false,
-            borderColor: '#7e7eff'
-          },
-        ]
-      };
-
-    return(data);
-  }
-public getChartOptions(meEVent:MeEvent):any {
-
-      return ({
-          scales: {
-
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              },
-              gridLines: {
-                display: false
-              }
-            }],
-            xAxes: [ {
-              gridLines: {
-                display: false
-              }
-            }]
-          },
-          legend: {
-            display: false
-          },
-          responsive: true,
-          maintainAspectRatio: false
-        }
-    );
-  }
-  
-  public getDateFromMeEvent(meEvent:MeEvent):string {
-    return(new Utils().getDateFullFromMeEvent(meEvent));
-  }
-
-  @Watch('meEvent', { 
-    immediate: true, deep: true 
-  })
-    public meEventChanged(newVal: MeEvent):void {
-      console.log(`meEventGroupTextChanged!!v newVal=${newVal.me_name}`);
-  }
-
-  public getMovieSrc():string {
-    let meEvent = this.meEvent;
-    let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
-    return(url);
-    }
+function getMovieSrc():string {
+  let meEvent = props.meEvent;
+  let url = `http://173.255.215.223:9090/catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/${meEvent.me_video_name}`;
+  return(url);
 }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-
 .me_event_detail {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: left;
-  color: #2c3e50;
-  background: #ffffff;
-  padding:10px;
-
-  border-width:1px;
-  border-style:solid;
-  border-color:black;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
 }
 
-.cmo_wrap {
-    max-width: 100%;
-    max-height: 100%;
+/* The video fills the screen and is scaled to fit, so it works in portrait and landscape */
+.detail_video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
 }
 
-.cmo_img {
-    max-width: 100%;
-    max-height: 100%;
+/* Floats over the top of the video so it never takes height away from it */
+.detail_bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px 28px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+  pointer-events: none;
 }
 
-.cmo_graph {
-    max-width: 600px;
-    max-height: 100px;
+.detail_close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  pointer-events: auto;
+  transition: background 0.15s;
+}
+
+.detail_close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.detail_close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.detail_info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-width: 0;
+  color: #fff;
+}
+
+.detail_date {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.detail_stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stat {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phone held sideways: slimmer bar, drop the stats */
+@media (orientation: landscape) and (max-height: 500px) {
+  .detail_bar {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: 20px;
+  }
+
+  .detail_close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .detail_stats {
+    display: none;
+  }
 }
 </style>
