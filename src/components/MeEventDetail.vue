@@ -1,6 +1,6 @@
 <template>
   <div class="me_event_detail">
-    <video class="detail_video" controls autoplay playsinline :src="getMovieSrc()" type="video/mp4">
+    <video ref="videoEl" class="detail_video" controls autoplay playsinline :src="getMovieSrc()" type="video/mp4">
       Your browser does not support the video tag.
     </video>
     <div class="detail_bar">
@@ -15,13 +15,29 @@
           <span class="stat">{{ (frameCount()/meEvent.me_time).toFixed(0)}} fps</span>
         </div>
       </div>
+      <button class="detail_delete" @click="askDelete()" aria-label="Delete event" title="Delete event">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" /></svg>
+      </button>
+    </div>
+
+    <!-- In the player rather than window.confirm(), which would drop Chrome out of fullscreen and close the player -->
+    <div v-if="confirmingDelete" class="confirm_backdrop" @click.self="cancelDelete()" @keydown.esc.stop="cancelDelete()">
+      <div class="confirm_box" role="alertdialog" aria-modal="true" aria-labelledby="confirm_title">
+        <div id="confirm_title" class="confirm_title">Delete this event?</div>
+        <div class="confirm_text">{{getDateFromMeEvent(meEvent)}} — the video and all its files will be removed from the server. This can't be undone.</div>
+        <div v-if="deleteError" class="confirm_error">Couldn't delete: {{deleteError}}</div>
+        <div class="confirm_buttons">
+          <button ref="cancelEl" class="btn" @click="cancelDelete()" :disabled="deleting">Cancel</button>
+          <button class="btn btn_danger" @click="doDelete()" :disabled="deleting">{{deleting ? 'Deleting…' : 'Delete'}}</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { CMO_SERVER } from '../ts/catcamservices';
-import { watch } from 'vue';
+import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
+import { nextTick, ref, watch } from 'vue';
 import type { MeEvent } from '../ts/meevent';
 import { Utils } from '../ts/utils';
 
@@ -31,7 +47,43 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
+  deleted: [meEvent: MeEvent];
 }>();
+
+const videoEl = ref<HTMLVideoElement | null>(null);
+const cancelEl = ref<HTMLButtonElement | null>(null);
+const confirmingDelete = ref(false);
+const deleting = ref(false);
+const deleteError = ref("");
+
+function askDelete():void {
+  videoEl.value?.pause();
+  deleteError.value = "";
+  confirmingDelete.value = true;
+  // focus Cancel, so Enter doesn't delete and Esc reaches the dialog
+  nextTick(() => cancelEl.value?.focus());
+}
+
+function cancelDelete():void {
+  if(deleting.value) return;
+  confirmingDelete.value = false;
+}
+
+function doDelete():void {
+  deleting.value = true;
+  deleteError.value = "";
+  new CatCamServices(CMO_SERVER).deleteMeEvent(props.meEvent)
+    .then(() => {
+      confirmingDelete.value = false;
+      emit('deleted', props.meEvent);
+    })
+    .catch((e: Error) => {
+      deleteError.value = e.message;
+    })
+    .finally(() => {
+      deleting.value = false;
+    });
+}
 
 function getDateFromMeEvent(meEvent:MeEvent):string {
   return(new Utils().getDateFullFromMeEvent(meEvent));
@@ -111,6 +163,91 @@ function getMovieSrc():string {
   outline-offset: 2px;
 }
 
+.detail_delete {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  pointer-events: auto;
+  transition: background 0.15s, color 0.15s;
+}
+
+.detail_delete:hover {
+  background: rgba(220, 53, 69, 0.85);
+}
+
+.detail_delete:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.confirm_backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.confirm_box {
+  width: 100%;
+  max-width: 380px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.confirm_title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.confirm_text {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.confirm_error {
+  margin-top: 10px;
+  color: #ff6b6b;
+  font-size: 0.9rem;
+}
+
+.confirm_buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.confirm_buttons .btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn_danger {
+  border-color: #dc3545;
+  background: #dc3545;
+  color: #fff;
+}
+
+.btn_danger:hover:not(:disabled) {
+  background: #c82333;
+}
+
 /* Dark backdrop so the date and stats stay readable over bright video (porch cam in daylight) */
 .detail_info {
   display: flex;
@@ -154,7 +291,8 @@ function getMovieSrc():string {
     padding-bottom: 20px;
   }
 
-  .detail_close {
+  .detail_close,
+  .detail_delete {
     width: 36px;
     height: 36px;
   }

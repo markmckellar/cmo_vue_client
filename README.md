@@ -15,7 +15,7 @@ The app is a static site. All of its data comes from [cmo_server](../cmo_server)
 | Vue | 3.5.43 | `<script setup>` + TypeScript |
 | Vite | 8.3.3 | dev server and build |
 | TypeScript | 6.0.3 | type-checked with vue-tsc 3.3.12 |
-| cmo_server | commit `c33c602` or later | needs the `/catcam/search` endpoint; Spring Boot 2.7.3, Java 17 |
+| cmo_server | with `DELETE /catcam/event` | needs the `/catcam/search` and `DELETE /catcam/event` endpoints; Spring Boot 2.7.3, Java 17 |
 
 There are no UI libraries. The styles are plain CSS (`src/styles.css` plus each component's `<style scoped>`).
 
@@ -121,6 +121,7 @@ Every component gets the server address from `CMO_SERVER` in `src/ts/catcamservi
 | `GET /catcam/meeventgroup/{group}/{date}?howMayRecords=&startRecord=&minimumDuration=` | the events on one date |
 | `GET /catcam/search/{group}?label=&howMayRecords=&minimumDuration=&before=` | events on any date that ollama tagged with `label`, newest first; `before` = the `me_name` of the last event already shown, for the next page |
 | `GET /catcam/data/{group}/{date}/{event}/{file}` | an event's files: `me_rep_image.jpg` (thumbnail), `me_movie.mp4` (video), `me_ollama.json` (classification) |
+| `DELETE /catcam/event/{group}/{date}/{event}` | the trash can in the video player: deletes the event and all its files (after the user confirms) |
 
 `me_ollama.json` is written by the ollama scripts (`cmo_ollama`). It holds true/false flags:
 

@@ -3,7 +3,7 @@
 
     <Transition name="player">
       <div v-if="isDialogActive()" ref="playerEl" class="player" role="dialog" aria-modal="true">
-        <MeEventDetail :meEvent="getCurrentMovie()" @close="closeDialog()" />
+        <MeEventDetail :meEvent="getCurrentMovie()" @close="closeDialog()" @deleted="onDeleted" />
       </div>
     </Transition>
 
@@ -134,6 +134,15 @@ function isDialogActive():boolean {
 function closeDialog():void {
   dialogActive.value = false;
   if(document.fullscreenElement) document.exitFullscreen().catch(() => {});
+}
+
+// The event was deleted on the server: back to the list, without it
+function onDeleted(meEvent:MeEvent):void {
+  closeDialog();
+  let before = fileList.value.length;
+  fileList.value = fileList.value.filter((e) => e.me_name !== meEvent.me_name);
+  // startRecord counts the server's event folders, and there is now one fewer ahead of the next page
+  if(fileList.value.length < before && startRecord.value > 0) startRecord.value -= 1;
 }
 
 function getCurrentMovie():MeEvent {

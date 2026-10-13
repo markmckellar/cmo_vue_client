@@ -89,6 +89,17 @@ export class CatCamServices {
       .catch(() => null);
     }
 
+  // Deletes the event and all its files on the server. Rejects if the server refuses.
+  public deleteMeEvent(meEvent:MeEvent): Promise<void> {
+    const url = `${this.catCamUrl}catcam/event/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}`;
+    console.log(`deleteMeEvent:url=${url}`);
+
+    return fetch(url, { method: 'DELETE' })
+      .then((res) => {
+        if(!res.ok) throw new Error(`server said ${res.status}`);
+      });
+    }
+
   public getMeEventGroupList(meGroup:string,howMayRecords:number): Promise<MeEventGroup[]> {
     const url = `${this.catCamUrl}catcam/meeventgroup/${meGroup}?howMayRecords=${howMayRecords}`;
     console.log(`getMeEventGroupList:url=${url}`);
