@@ -48,6 +48,7 @@
 import { computed, ref, watch } from 'vue';
 import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
 import type { MeEventGroup } from '../ts/meeventgroup';
+import { CLASSIFICATIONS } from '../ts/meollama';
 import MeEventList from './MeEventList.vue';
 
 const props = withDefaults(defineProps<{
@@ -63,7 +64,7 @@ const fileList = ref<MeEventGroup[]>([]);
 const searchText = ref("");
 const searchLabel = ref("");
 // suggestions for the search box; the server matches any label ollama writes
-const knownLabels = ['cat', 'dog', 'person', 'raccoon', 'animal', 'legs'];
+const knownLabels = CLASSIFICATIONS.map((c) => c.label);
 const showSuggestions = ref(false);
 
 const suggestions = computed<string[]>(() => {

@@ -100,6 +100,19 @@ export class CatCamServices {
       });
     }
 
+  // Changes the event's classification to labels, e.g. {cat: true, delivery: false}; at least one must
+  // be true. The server keeps the old one. Resolves to the new me_ollama.json; rejects if the server refuses.
+  public setClassification(meEvent:MeEvent, labels:Record<string, boolean>): Promise<MeOllama> {
+    const url = `${this.catCamUrl}catcam/event/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/classification`;
+    console.log(`setClassification:url=${url}`);
+
+    return fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(labels) })
+      .then((res) => {
+        if(!res.ok) throw new Error(`server said ${res.status}`);
+        return res.json();
+      });
+    }
+
   public getMeEventGroupList(meGroup:string,howMayRecords:number): Promise<MeEventGroup[]> {
     const url = `${this.catCamUrl}catcam/meeventgroup/${meGroup}?howMayRecords=${howMayRecords}`;
     console.log(`getMeEventGroupList:url=${url}`);
