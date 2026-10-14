@@ -27,6 +27,15 @@ export const CLASSIFICATIONS:{label:string, description:string}[] = [
   { label: 'delivery', description: 'A delivery person brought something to the house' },
 ];
 
+// The labels to show for an event: the true ones, less the ones that add nothing. "animal" adds
+// nothing when a specific animal was found, nor "legs" when a person was.
+export function displayLabels(ollama:MeOllama|null|undefined):string[] {
+  let tags = trueLabels(ollama);
+  if(tags.some((t) => t !== 'animal' && t !== 'person' && t !== 'legs')) tags = tags.filter((t) => t !== 'animal');
+  if(tags.includes('person')) tags = tags.filter((t) => t !== 'legs');
+  return(tags);
+}
+
 // The labels of a classification that are true, without the backups
 export function trueLabels(ollama:MeOllama|null|undefined):string[] {
   if(!ollama) return([]);

@@ -4,21 +4,34 @@
       Your browser does not support the video tag.
     </video>
     <div class="detail_bar">
-      <button class="detail_close" @click="emit('close')" aria-label="Close">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-      </button>
-      <div class="detail_info">
-        <div class="detail_date">{{getDateFromMeEvent(meEvent)}}</div>
-        <div class="detail_stats">
-          <span class="stat">{{meEvent.me_time.toFixed(1)}}s</span>
-          <span class="stat">{{frameCount()}} frames</span>
-          <span class="stat">{{ (frameCount()/meEvent.me_time).toFixed(0)}} fps</span>
+      <div class="detail_left">
+        <button class="detail_close" @click="emit('close')" aria-label="Close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+        <div class="detail_info">
+          <div class="detail_date">{{getDateFromMeEvent(meEvent)}}</div>
+          <div class="detail_stats">
+            <span class="stat">{{meEvent.me_time.toFixed(1)}}s</span>
+            <span class="stat">{{frameCount()}} frames</span>
+            <span class="stat">{{ (frameCount()/meEvent.me_time).toFixed(0)}} fps</span>
+          </div>
         </div>
+      </div>
+      <!-- top middle; touching it changes the classification. Hidden until the classification has loaded -->
+      <div class="detail_tags_row">
+        <button v-if="ollama !== undefined" class="detail_tags" @click="askClassify()" aria-label="Change classification" title="Change classification">
+          <span v-for="tag in tags" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
+          <span v-if="tags.length === 0" class="event_tag tag_none">unclassified</span>
+          <svg class="detail_tags_edit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+        </button>
       </div>
       <button class="detail_delete" @click="askDelete()" aria-label="Delete event" title="Delete event">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" /></svg>
       </button>
     </div>
+
+    <!-- In the player, like the delete confirmation, so it shows when the player is fullscreen -->
+    <ClassifyDialog v-if="classifying" :meEvent="meEvent" :ollama="ollama ?? null" @close="classifying = false" @saved="onClassified" />
 
     <!-- In the player rather than window.confirm(), which would drop Chrome out of fullscreen and close the player -->
     <div v-if="confirmingDelete" class="confirm_backdrop" @click.self="cancelDelete()" @keydown.esc.stop="cancelDelete()">
@@ -37,17 +50,22 @@
 
 <script setup lang="ts">
 import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import type { MeEvent } from '../ts/meevent';
+import { displayLabels, type MeOllama } from '../ts/meollama';
+import ClassifyDialog from './ClassifyDialog.vue';
 import { Utils } from '../ts/utils';
 
 const props = defineProps<{
   meEvent: MeEvent;
+  // the event's classification; null if it has none, undefined while it is still loading
+  ollama?: MeOllama|null;
 }>();
 
 const emit = defineEmits<{
   close: [];
   deleted: [meEvent: MeEvent];
+  classified: [meEvent: MeEvent, ollama: MeOllama];
 }>();
 
 const videoEl = ref<HTMLVideoElement | null>(null);
@@ -55,6 +73,19 @@ const cancelEl = ref<HTMLButtonElement | null>(null);
 const confirmingDelete = ref(false);
 const deleting = ref(false);
 const deleteError = ref("");
+const classifying = ref(false);
+
+const tags = computed(() => displayLabels(props.ollama));
+
+function askClassify():void {
+  videoEl.value?.pause();
+  classifying.value = true;
+}
+
+function onClassified(ollama:MeOllama):void {
+  classifying.value = false;
+  emit('classified', props.meEvent, ollama);
+}
 
 function askDelete():void {
   videoEl.value?.pause();
@@ -127,9 +158,11 @@ function getMovieSrc():string {
   top: 0;
   left: 0;
   right: 0;
-  display: flex;
+  /* close and date | classification | delete: the middle stays centred on the screen while both sides fit */
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
   align-items: center;
-  gap: 14px;
+  gap: 10px 14px;
   padding: 12px 16px 28px;
   padding-top: max(12px, env(safe-area-inset-top));
   padding-left: max(16px, env(safe-area-inset-left));
@@ -163,13 +196,58 @@ function getMovieSrc():string {
   outline-offset: 2px;
 }
 
+.detail_left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.detail_tags_row {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.detail_tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  pointer-events: auto;
+  transition: background 0.15s;
+}
+
+.detail_tags:hover {
+  background: rgba(40, 40, 40, 0.8);
+}
+
+.detail_tags:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.detail_tags_edit {
+  flex: none;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .detail_delete {
   flex: none;
   display: grid;
   place-items: center;
   width: 42px;
   height: 42px;
-  margin-left: auto;
+  justify-self: end;
   border: 0;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
@@ -282,6 +360,18 @@ function getMovieSrc():string {
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* Narrow screens: the classification gets its own row, centred under the date */
+@media (max-width: 700px) {
+  .detail_bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .detail_tags_row {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
 }
 
 /* Phone held sideways: slimmer bar, drop the stats */

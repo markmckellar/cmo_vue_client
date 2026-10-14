@@ -3,37 +3,29 @@
 
     <Transition name="player">
       <div v-if="isDialogActive()" ref="playerEl" class="player" role="dialog" aria-modal="true">
-        <MeEventDetail :meEvent="getCurrentMovie()" @close="closeDialog()" @deleted="onDeleted" />
+        <MeEventDetail :meEvent="getCurrentMovie()" :ollama="ollamaByName[getCurrentMovie().me_name]"
+          @close="closeDialog()" @deleted="onDeleted" @classified="onClassified" />
       </div>
     </Transition>
 
-    <ClassifyDialog v-if="classifying" :meEvent="classifying" :ollama="ollamaByName[classifying.me_name] ?? null"
-      @close="classifying = null" @saved="onClassified" />
-
     <div class="event_grid">
-      <div class="event_card" v-for="(meEvent, index) in fileList" v-bind:key="index">
-        <button class="event_open" @click="watchMovie(meEvent)">
-          <div class="event_thumb">
-            <img v-bind:src="getRepImageSrc(meEvent)" alt="" loading="lazy">
-            <span class="event_play" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
-            </span>
-            <span class="event_duration">{{meEvent.me_time.toFixed(1)}}s</span>
+      <button class="event_card" v-for="(meEvent, index) in fileList" v-bind:key="index" @click="watchMovie(meEvent)">
+        <div class="event_thumb">
+          <img v-bind:src="getRepImageSrc(meEvent)" alt="" loading="lazy">
+          <span class="event_play" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+          </span>
+          <div class="event_tags" v-if="getTags(meEvent).length">
+            <span v-for="tag in getTags(meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
           </div>
-          <div class="event_body">
-            <div class="event_ago">{{getTimePassedToMe(meEvent,index)}} ago</div>
-            <div class="event_meta">{{searchLabel ? `${getDateYear(meEvent)} ` : ""}}at {{getDateTime(meEvent)}}</div>
-            <div class="event_prev">{{getTime2PreviousMe(meEvent,index)}}</div>
-          </div>
-        </button>
-        <!-- over the thumbnail but outside the button above; touching one changes the classification -->
-        <div class="event_tags" v-if="meEvent.me_name in ollamaByName">
-          <button v-for="tag in getTags(meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`"
-            @click="classifying = meEvent" title="Change classification">{{tag}}</button>
-          <button v-if="getTags(meEvent).length === 0" class="event_tag tag_none"
-            @click="classifying = meEvent" title="Classify">unclassified</button>
+          <span class="event_duration">{{meEvent.me_time.toFixed(1)}}s</span>
         </div>
-      </div>
+        <div class="event_body">
+          <div class="event_ago">{{getTimePassedToMe(meEvent,index)}} ago</div>
+          <div class="event_meta">{{searchLabel ? `${getDateYear(meEvent)} ` : ""}}at {{getDateTime(meEvent)}}</div>
+          <div class="event_prev">{{getTime2PreviousMe(meEvent,index)}}</div>
+        </div>
+      </button>
     </div>
 
     <div v-if="loading" class="list_status">{{searchLabel ? 'Searching…' : 'Loading…'}}</div>
@@ -50,11 +42,10 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
 import type { MeEvent } from '../ts/meevent';
-import { trueLabels, type MeOllama } from '../ts/meollama';
+import { displayLabels, type MeOllama } from '../ts/meollama';
 import { MeEventImp } from '../ts/meeventimp';
 import { Utils } from '../ts/utils';
 import MeEventDetail from './MeEventDetail.vue';
-import ClassifyDialog from './ClassifyDialog.vue';
 
 const props = withDefaults(defineProps<{
   meGroupText: string;
@@ -75,8 +66,6 @@ const dialogActive = ref(false);
 const currentMeEvent = ref<MeEvent>(MeEventImp.getNewEmptyMeEvent());
 const playerEl = ref<HTMLElement | null>(null);
 const ollamaByName = ref<Record<string, MeOllama|null>>({});
-// the event whose classification is being changed
-const classifying = ref<MeEvent|null>(null);
 
 function getTimePassedToMe(meEvent:MeEvent,_index:number):string {
   let me = new MeEventImp(meEvent);
@@ -121,16 +110,12 @@ function msToStringAgo(timePassed:number):string {
 
 // Labels to show for an event, from its ollama classification
 function getTags(meEvent:MeEvent):string[] {
-  let tags = trueLabels(ollamaByName.value[meEvent.me_name]);
-  // "animal" adds nothing when a specific animal was found, nor "legs" when a person was
-  if(tags.some((t) => t !== 'animal' && t !== 'person' && t !== 'legs')) tags = tags.filter((t) => t !== 'animal');
-  if(tags.includes('person')) tags = tags.filter((t) => t !== 'legs');
-  return(tags);
+  return(displayLabels(ollamaByName.value[meEvent.me_name]));
 }
 
-function onClassified(ollama:MeOllama):void {
-  if(classifying.value) ollamaByName.value[classifying.value.me_name] = ollama;
-  classifying.value = null;
+// The classification was changed in the player
+function onClassified(meEvent:MeEvent, ollama:MeOllama):void {
+  ollamaByName.value[meEvent.me_name] = ollama;
 }
 
 function getDateTime(meEvent:MeEvent):string {
@@ -252,24 +237,16 @@ onBeforeUnmount(() => {
 }
 
 .event_card {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-
-.event_open {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: inherit;
-  background: none;
   color: inherit;
   text-align: left;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .event_card:hover {
@@ -278,9 +255,9 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow);
 }
 
-.event_open:focus-visible {
+.event_card:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .event_thumb {
@@ -319,7 +296,7 @@ onBeforeUnmount(() => {
 }
 
 .event_card:hover .event_play,
-.event_open:focus-visible .event_play {
+.event_card:focus-visible .event_play {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
@@ -346,55 +323,6 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 6px;
   pointer-events: none;
-}
-
-.event_tag {
-  padding: 2px 9px;
-  border: 0;
-  border-radius: 999px;
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.tag_cat {
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
-.tag_dog {
-  background: #4f8df5;
-}
-
-.tag_person {
-  background: #2fb47c;
-}
-
-.tag_raccoon {
-  background: #a26bf0;
-}
-
-.tag_delivery {
-  background: #e0613a;
-}
-
-.tag_none {
-  color: rgba(255, 255, 255, 0.75);
-  font-weight: 500;
-}
-
-.event_tag:hover {
-  filter: brightness(1.15);
-}
-
-.event_tag:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 1px;
 }
 
 .event_body {
