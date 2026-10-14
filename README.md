@@ -19,6 +19,16 @@ The app is a static site. All of its data comes from [cmo_server](../cmo_server)
 
 There are no UI libraries. The styles are plain CSS (`src/styles.css` plus each component's `<style scoped>`).
 
+### This app's version
+
+Versioned the same way as every cmo repo (see cmo_ollama's README): `cmo_vue_client:1.3.0` on the `v1.3.0`
+release, `1.3.0+4` four commits after it, `1.3.0+4.dirty` with uncommitted changes too. `vite.config.ts`
+works it out from `git describe` when the app is built, so a build says which code made it: the bottom of
+the page shows it with the server's (`cmo_vue_client:1.0.0 · cmo_server:1.0.0`, the server's from
+`GET /catcam/version`), and the built `index.html` has `<meta name="cmo-code" content="cmo_vue_client:1.0.0">`.
+To release, commit everything, run `./release.bash patch|minor|major [message]` (it also sets the version in
+`package.json` and `package-lock.json`), then deploy, so the build has the new version.
+
 ## Setup
 
 Get the right node with [nvm](https://github.com/nvm-sh/nvm):
@@ -138,6 +148,7 @@ A new label from ollama appears automatically. To give it its own color, add a `
 index.html                    page shell (Vite entry)
 vite.config.ts                Vite config (port 8080, base './')
 deploy                        build + copy into cmo_server
+release.bash                  tag a new version (see This app's version)
 src/
   main.ts                     starts the app, loads styles.css
   styles.css                  colors, fonts, shared button/select styles
