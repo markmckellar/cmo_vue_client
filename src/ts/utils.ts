@@ -10,7 +10,19 @@ export class Utils {
 
       public getDateTime(meEvent:MeEvent):string { 
         let dateString =  `${meEvent.me_name.substring(9,11)}:${meEvent.me_name.substring(11,13)}.${meEvent.me_name.substring(13,15)}`;
-        return(dateString);
+        return(dateString+" "+Utils.getZoneName(meEvent));
+      }
+
+      // the cameras' zone abbreviation (MST/MDT) in effect when the event happened
+      public static getZoneName(meEvent:MeEvent, timeZone:string = CAMERA_TIME_ZONE):string {
+        const n = meEvent.me_name;
+        const iso = `${n.substring(0,4)}-${n.substring(4,6)}-${n.substring(6,8)}T${n.substring(9,11)}:${n.substring(11,13)}:${n.substring(13,15)}`;
+        const t = Utils.parseEventTime(iso, timeZone);
+        if(isNaN(t)) {
+          return("");
+        }
+        return(new Intl.DateTimeFormat('en-US', {timeZone, timeZoneName: 'short'})
+            .formatToParts(new Date(t)).find(p => p.type === 'timeZoneName')?.value ?? "");
       }
 
       public getDateYear(meEvent:MeEvent):string {    
