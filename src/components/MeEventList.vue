@@ -69,9 +69,7 @@ const ollamaByName = ref<Record<string, MeOllama|null>>({});
 
 function getTimePassedToMe(meEvent:MeEvent,_index:number):string {
   let me = new MeEventImp(meEvent);
-  let dateRecent = new Date(Date.now());
-  let dateLast = new Date(Date.parse(me.getLastMeEventTime()));
-  let timePassed = dateRecent.getTime()-dateLast.getTime();
+  let timePassed = Date.now()-Utils.parseEventTime(me.getLastMeEventTime());
 
   return(msToStringAgo(timePassed));
 }
@@ -79,11 +77,8 @@ function getTimePassedToMe(meEvent:MeEvent,_index:number):string {
 function getTime2PreviousMe(meEvent:MeEvent,index:number):string {
   let me = new MeEventImp(meEvent);
   if(index<(fileList.value.length-1)) {
-    let dateRecent = new Date(Date.now());
     let nextMeEvent = new MeEventImp(fileList.value[index+1]!);
-    dateRecent.setTime(Date.parse(nextMeEvent.getLastMeEventTime()));
-    let dateLast = new Date(Date.parse(me.getLastMeEventTime()));
-    let timePassed = dateLast.getTime()-dateRecent.getTime();
+    let timePassed = Utils.parseEventTime(me.getLastMeEventTime())-Utils.parseEventTime(nextMeEvent.getLastMeEventTime());
     return(`previous event ${msToStringAgo(timePassed)}`);
   } else {
     return("last event");

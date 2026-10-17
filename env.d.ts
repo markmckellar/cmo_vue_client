@@ -5,4 +5,5 @@ declare const __CMO_CODE__: string;
 
 interface ImportMetaEnv {
   readonly VITE_CMO_SERVER?: string;
+  readonly VITE_CAMERA_TIME_ZONE?: string;
 }

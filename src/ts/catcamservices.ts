@@ -9,6 +9,10 @@ import type { MeOllama } from './meollama';
 // the client with e.g. VITE_CMO_SERVER=http://192.168.1.167:9090/ npm run dev
 export const CMO_SERVER: string = (import.meta.env.VITE_CMO_SERVER || 'http://173.255.215.223:9090/').replace(/\/?$/, '/');
 
+// The cameras' time zone. Older events have event_time_iso without an offset, in the camera's
+// local time; without this they'd be read in the browser's zone, which is wrong when traveling.
+export const CAMERA_TIME_ZONE: string = import.meta.env.VITE_CAMERA_TIME_ZONE || 'America/Denver';
+
 export class CatCamServices {
    public catCamUrl:string;
 
