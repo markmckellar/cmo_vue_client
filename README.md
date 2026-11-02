@@ -120,9 +120,10 @@ or the page loads blank.
 
 ## How it talks to the server
 
-Every component gets the server address from `CMO_SERVER` in `src/ts/catcamservices.ts`. It is
-`http://173.255.215.223:9090/` unless `VITE_CMO_SERVER` is set when the app is run or built
-(`VITE_CMO_SERVER=http://host:9090/ npm run build`). Change the default there if the server moves.
+Every component gets the server address from `CMO_SERVER` in `src/ts/catcamservices.ts`. A build talks to
+the server that served the page (`window.location.origin`), so the same build works on any cmo_server, over
+http or https. In dev it's `http://173.255.215.223:9090/`. `VITE_CMO_SERVER` overrides both when the app is
+run or built (`VITE_CMO_SERVER=http://host:9090/ npm run build`).
 
 | Endpoint | Used for |
 |---|---|
