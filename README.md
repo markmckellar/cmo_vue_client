@@ -59,14 +59,15 @@ To try it on your phone, add `--host` and open the "Network" address it prints (
 ```
 npm run dev -- --host
 #  ➜  Local:   http://localhost:8080/
-#  ➜  Network: http://192.168.1.167:8080/
+#  ➜  Network: http://<this computer's address>:8080/
 ```
 
-Even in dev, the app talks to the real server at `http://173.255.215.223:9090/` unless you point it
-at another one, e.g. a local test server:
+In dev the app talks to a cmo_server on this machine (`http://localhost:9090/`) unless you point it at
+another one. Use a server in open mode (a copy at home): the cloud server needs sign-in, which a dev page on
+another address can't share.
 
 ```
-VITE_CMO_SERVER=http://192.168.1.167:9090/ npm run dev -- --host
+VITE_CMO_SERVER=http://<home-server>:9090/ npm run dev -- --host
 ```
 
 Other commands:
@@ -109,9 +110,9 @@ rm -rf assets js css index.html favicon.ico
 cp -R ~/dev/cmo_vue_client_newdev/dist/* .
 ```
 
-Then commit cmo_server, rebuild it and restart it on the server (`mvn spring-boot:run`, see its README). The app is then at:
+Then commit cmo_server, rebuild it and restart it on the server (see its README). The app is then at:
 
-**http://173.255.215.223:9090/cmo_client/index.html**
+**https://cmoserver01.mckcode.com/cmo_client/index.html** (sign in with Google; see cmo_server's README, "Logins and device keys")
 
 Include `index.html` in the link; the server doesn't serve `/cmo_client/` by itself.
 
@@ -122,7 +123,7 @@ or the page loads blank.
 
 Every component gets the server address from `CMO_SERVER` in `src/ts/catcamservices.ts`. A build talks to
 the server that served the page (`window.location.origin`), so the same build works on any cmo_server, over
-http or https. In dev it's `http://173.255.215.223:9090/`. `VITE_CMO_SERVER` overrides both when the app is
+http or https. In dev it's `http://localhost:9090/`. `VITE_CMO_SERVER` overrides both when the app is
 run or built (`VITE_CMO_SERVER=http://host:9090/ npm run build`).
 
 | Endpoint | Used for |

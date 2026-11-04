@@ -6,11 +6,12 @@ import type { MeEvent } from './meevent';
 import type { MeOllama } from './meollama';
 
 // The cmo_server to talk to. A build is served by a cmo_server (at /cmo_client/), so it talks to that same
-// server, over http or https as the page was loaded. In dev (npm run dev) it's the old production server.
+// server, over http or https as the page was loaded. In dev (npm run dev) it's a cmo_server on this machine
+// (one in open mode, e.g. a copy at home, needs no sign-in).
 // To use another server, set it when running or building, e.g.
-// VITE_CMO_SERVER=http://192.168.1.167:9090/ npm run dev
+// VITE_CMO_SERVER=http://<home-server>:9090/ npm run dev
 export const CMO_SERVER: string = (import.meta.env.VITE_CMO_SERVER
-  || (import.meta.env.PROD ? window.location.origin + '/' : 'http://173.255.215.223:9090/')).replace(/\/?$/, '/');
+  || (import.meta.env.PROD ? window.location.origin + '/' : 'http://localhost:9090/')).replace(/\/?$/, '/');
 
 // The cameras' time zone. Older events have event_time_iso without an offset, in the camera's
 // local time; without this they'd be read in the browser's zone, which is wrong when traveling.
