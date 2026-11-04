@@ -16,6 +16,20 @@ export const CMO_SERVER: string = (import.meta.env.VITE_CMO_SERVER
 // local time; without this they'd be read in the browser's zone, which is wrong when traveling.
 export const CAMERA_TIME_ZONE: string = import.meta.env.VITE_CAMERA_TIME_ZONE || 'America/Denver';
 
+// fetch for the server's API. If the server says we need to sign in (401), or that this account is still
+// waiting for approval, go to its sign-in page and come back here afterwards.
+export async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(url, { credentials: 'same-origin', ...init });
+  if (res.status === 401 || res.status === 403) {
+    const body = await res.clone().json().catch(() => ({}));
+    if (res.status === 401 || body.error === 'waiting for approval') {
+      const here = window.location.pathname + window.location.search + window.location.hash;
+      window.location.href = CMO_SERVER + 'signin.html?next=' + encodeURIComponent(here);
+    }
+  }
+  return res;
+}
+
 export class CatCamServices {
    public catCamUrl:string;
 
@@ -27,7 +41,7 @@ export class CatCamServices {
   public getMovieList(meGroup:string): Promise<Movie[]> {
     const url = `${this.catCamUrl}catcam/movies/{meGroup}`;
     console.log(`getMovieList:url=${url}`);
-    return fetch(url)
+    return apiFetch(url)
         .then((res) => res.json());
     }
 
@@ -65,7 +79,7 @@ export class CatCamServices {
     if(!meGroup) meGroup = "dummp_arg";
     if(!meGroupEvent) meGroupEvent = "dummp_arg";
 
-    return fetch(url)
+    return apiFetch(url)
       .then((res) => res.json())
       .then((res) => res.map((meEvent: any) => this.formatMeEvent(meEvent)));
     }
@@ -82,7 +96,7 @@ export class CatCamServices {
     if(before) url += `&before=${encodeURIComponent(before)}`;
     console.log(`searchMeEvents:url=${url}`);
 
-    return fetch(url)
+    return apiFetch(url)
       .then((res) => res.json())
       .then((res) => res.map((meEvent: any) => this.formatMeEvent(meEvent)));
     }
@@ -91,7 +105,7 @@ export class CatCamServices {
   public getMeOllama(meEvent:MeEvent): Promise<MeOllama|null> {
     const url = `${this.catCamUrl}catcam/data/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/me_ollama.json`;
 
-    return fetch(url)
+    return apiFetch(url)
       .then((res) => res.ok ? res.json() : null)
       .catch(() => null);
     }
@@ -101,7 +115,7 @@ export class CatCamServices {
     const url = `${this.catCamUrl}catcam/event/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}`;
     console.log(`deleteMeEvent:url=${url}`);
 
-    return fetch(url, { method: 'DELETE' })
+    return apiFetch(url, { method: 'DELETE' })
       .then((res) => {
         if(!res.ok) throw new Error(`server said ${res.status}`);
       });
@@ -113,7 +127,7 @@ export class CatCamServices {
     const url = `${this.catCamUrl}catcam/event/${meEvent.me_group}/${meEvent.me_event_group}/${meEvent.me_name}/classification`;
     console.log(`setClassification:url=${url}`);
 
-    return fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(labels) })
+    return apiFetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(labels) })
       .then((res) => {
         if(!res.ok) throw new Error(`server said ${res.status}`);
         return res.json();
@@ -124,7 +138,7 @@ export class CatCamServices {
     const url = `${this.catCamUrl}catcam/meeventgroup/${meGroup}?howMayRecords=${howMayRecords}`;
     console.log(`getMeEventGroupList:url=${url}`);
 
-    return fetch(url)
+    return apiFetch(url)
       .then((res) => res.json())
       .then((res) => res.map((meEventGroup: any) => this.formatMeGroup(meEventGroup)));
     }
@@ -133,7 +147,7 @@ export class CatCamServices {
     const url = `${this.catCamUrl}catcam/megroups`;
     console.log(`getMeGroupList:url=${url}`);
 
-    return fetch(url)
+    return apiFetch(url)
       .then((res) => res.json())
       .then((res) => res.map((meGroup: any) => this.formatMeGroup(meGroup)));
     }
@@ -142,7 +156,7 @@ export class CatCamServices {
     const url = `${this.catCamUrl}catcam/movies`;
     console.log(`getMovieList:url=${url}`);
 
-    return fetch(url)
+    return apiFetch(url)
       .then((res) => res.json())
       .then((res) => res.map((movie: any) => this.formatMovie(movie)));
     }
@@ -150,7 +164,7 @@ export class CatCamServices {
       /*
       class MovieService {
   getMovies(genre: string): Promise<Movie[]> {
-    return fetch(`https://www.movies.com/${genre}`)
+    return window.fetch(`https://www.movies.com/${genre}`)
         .then(res => res.json())
         .then(res => res.map((movie: any) => formatMovie(movie))
   }

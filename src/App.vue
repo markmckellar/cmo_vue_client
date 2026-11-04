@@ -8,6 +8,11 @@
         </svg>
       </span>
       <h1 class="app_title">Home Cams</h1>
+      <nav v-if="me" class="app_user">
+        <span class="app_user_name" :title="me.email">{{ me.name || me.email }}</span>
+        <a v-if="me.admin" :href="CMO_SERVER + 'admin.html'">Access</a>
+        <button type="button" class="app_signout" @click="signOut">Sign out</button>
+      </nav>
     </div>
   </header>
 
@@ -27,6 +32,21 @@ import { CMO_SERVER } from './ts/catcamservices';
 // (nothing for a server too old to have it)
 const CLIENT_CODE = __CMO_CODE__;
 const serverCode = ref('');
+
+// who is signed in (a server in google mode), for the header; nothing on a server at home (open mode)
+const me = ref<{ email: string; name?: string; admin?: boolean } | null>(null);
+async function signOut() {
+  await fetch(CMO_SERVER + 'auth/logout', { method: 'POST', credentials: 'same-origin' });
+  window.location.href = CMO_SERVER + 'signin.html';
+}
+onMounted(async () => {
+  try {
+    const cfg = await (await fetch(CMO_SERVER + 'auth/config', { credentials: 'same-origin' })).json();
+    if (cfg.caller === 'person') me.value = { email: cfg.email, name: cfg.name, admin: cfg.admin };
+  } catch {
+    // an older server without /auth/config: no sign-in
+  }
+});
 onMounted(async () => {
   try {
     const response = await fetch(CMO_SERVER + 'catcam/version');
@@ -69,6 +89,32 @@ onMounted(async () => {
 
 .app_title {
   font-size: 1.2rem;
+}
+
+.app_user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.app_user a,
+.app_signout {
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.app_user_name {
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app_main {
