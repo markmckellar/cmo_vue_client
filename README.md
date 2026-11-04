@@ -1,5 +1,7 @@
 # Home Cams
 
+> Part of the [Private AI home camera system](https://github.com/markmckellar/cmo): this repo is the web app. The other parts: [cmo_client](https://github.com/markmckellar/cmo_client) · [cmo_ollama](https://github.com/markmckellar/cmo_ollama) · [cmo_server](https://github.com/markmckellar/cmo_server).
+
 Web app for browsing the motion events recorded by the home cameras. Each event shows a thumbnail, the
 time it happened, and what ollama found in it (cat, dog, person, ...). Click a tile to play the video full screen.
 You can browse by date or search every date for one classification.
