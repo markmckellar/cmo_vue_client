@@ -20,13 +20,28 @@
     <MeGroupList />
   </main>
 
+  <!-- an event opened from a link (Telegram alerts) plays on top of the list -->
+  <LinkedEvent />
+
   <footer class="app_footer">{{ CLIENT_CODE }}<template v-if="serverCode"> · {{ serverCode }}</template></footer>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import MeGroupList from './components/MeGroupList.vue';
+import LinkedEvent from './components/LinkedEvent.vue';
 import { CMO_SERVER } from './ts/catcamservices';
+import { eventLinkFromHash } from './ts/eventlink';
+
+// a link to one event also shows its camera's list underneath (MeGroupList starts on the remembered camera)
+const linked = eventLinkFromHash(window.location.hash);
+if (linked) {
+  try {
+    localStorage.setItem('cmo_selected_camera', linked.meGroup);
+  } catch {
+    // storage blocked: the list starts on the first camera
+  }
+}
 
 // which code this is: the web client's version, and the server's from /catcam/version
 // (nothing for a server too old to have it)
