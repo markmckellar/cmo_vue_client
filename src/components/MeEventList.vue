@@ -178,7 +178,10 @@ function geMeEventList(): void {
       fileList.value.push(...meEventList);
       hasMore.value = meEventList.length >= props.howMayRecords;
       for (let meEvent of meEventList) {
-        catCamServices.getMeOllama(meEvent).then((ollama) => {
+        // the server sends each event's labels with the list; an older server doesn't, so ask for them
+        const sent = (meEvent as unknown as Record<string, unknown>)['me_ollama'];
+        if(sent !== undefined) ollamaByName.value[meEvent.me_name] = sent as MeOllama|null;
+        else catCamServices.getMeOllama(meEvent).then((ollama) => {
           ollamaByName.value[meEvent.me_name] = ollama;
         });
       }
