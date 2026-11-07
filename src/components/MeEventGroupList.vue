@@ -12,11 +12,10 @@
     <div class="filters">
       <!-- every filter in one group of the same buttons: what (Cats, Dogs, ...: several at once), when (Today,
            Yesterday, Past week: one at a time) and More (rarer dates, hiding people). Tap to turn on (orange, with a
-           check), tap again to turn off. "All" is lit when nothing is filtered, and tapping it clears every filter.
+           check), tap again to turn off. Cameras start all on, and the kinds of clip start with "All clips" on;
+           "Clear filters" in the Showing line resets everything.
            A rarer filter, once on, shows here as its own button with an x, so everything that's on is in sight. -->
       <div class="chip_row" role="group" aria-label="Filters">
-        <button type="button" class="chip" :class="{ chip_on: !hasFilters(filters) }" :aria-pressed="!hasFilters(filters)"
-          @click="clearAll()">All</button>
         <!-- cameras first, all on to start (like Ring or Nest): tap one off to leave it out; a camera icon marks them -->
         <template v-if="cameras.length > 1">
           <button v-for="cam in cameras" :key="'cam:' + cam" type="button" class="chip chip_camera" :class="{ chip_on: cameraOn(cam) }"
@@ -25,6 +24,10 @@
             {{cameraName(cam)}}
           </button>
         </template>
+        <!-- the kinds of clip start with "All clips" on (nothing picked = every clip, including ones the AI found
+             nothing in); tapping a kind turns it off, tapping "All clips" brings everything back -->
+        <button type="button" class="chip" :class="{ chip_on: filters.labels.length === 0 }" :aria-pressed="filters.labels.length === 0"
+          @click="update({ labels: [] })">All clips</button>
         <button v-for="c in choices" :key="c.label" type="button" class="chip" :class="{ chip_on: filters.labels.includes(c.label) }"
           :aria-pressed="filters.labels.includes(c.label)" @click="toggle(c.label)">
           <template v-if="filters.labels.includes(c.label)"><svg class="chip_tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7" /></svg></template>
