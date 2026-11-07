@@ -3,7 +3,9 @@
     <!-- one camera at a time; :key starts the event list over when the camera changes -->
     <MeEventGroupList v-if="selectedMeGroup" :meGroupText="selectedMeGroup" :key="selectedMeGroup">
       <template #title>
-        <label class="camera_picker">
+        <!-- one camera (e.g. a friend): just its name; more: a picker -->
+        <h2 v-if="fileList.length === 1" class="camera_only">{{cameraName(selectedMeGroup)}}</h2>
+        <label v-else class="camera_picker">
           <span class="camera_label">Camera</span>
           <select class="select camera_select" v-model="selectedMeGroup" aria-label="Camera">
             <option v-for="meGroup in fileList" :key="meGroup.meGroup" :value="meGroup.meGroup">
@@ -79,6 +81,11 @@ geMeGroupList();
   flex-direction: column;
   gap: 6px;
   margin: 0;
+}
+
+.camera_only {
+  margin: 0;
+  font-size: 1.6rem;
 }
 
 .camera_label {

@@ -8,28 +8,41 @@
       </div>
     </Transition>
 
-    <div class="event_grid">
-      <button class="event_card" v-for="(meEvent, index) in fileList" v-bind:key="index" @click="watchMovie(meEvent)">
-        <div class="event_thumb">
-          <img v-bind:src="getRepImageSrc(meEvent)" alt="" loading="lazy">
-          <span class="event_play" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
-          </span>
-          <div class="event_tags" v-if="getTags(meEvent).length">
-            <span v-for="tag in getTags(meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
+    <!-- grouped by day, like a photo app: Today, Yesterday, Wed, Nov 4 -->
+    <section v-for="day in days" :key="day.key" class="day">
+      <h3 class="day_heading">{{day.heading}}</h3>
+      <div class="event_grid">
+        <button class="event_card" v-for="item in day.items" :key="item.meEvent.me_name" @click="watchMovie(item.meEvent)"
+          :aria-label="`${getTags(item.meEvent).join(', ') || 'Clip'}, ${day.heading} at ${clockTime(item.meEvent.me_name)}`">
+          <div class="event_thumb">
+            <img v-bind:src="getRepImageSrc(item.meEvent)" alt="" loading="lazy">
+            <span class="event_play" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+            </span>
+            <div class="event_tags" v-if="getTags(item.meEvent).length">
+              <span v-for="tag in getTags(item.meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
+            </div>
+            <span class="event_duration">{{formatLength(item.meEvent.me_time)}}</span>
           </div>
-          <span class="event_duration">{{meEvent.me_time.toFixed(1)}}s</span>
-        </div>
-        <div class="event_body">
-          <div class="event_ago">{{getTimePassedToMe(meEvent,index)}} ago</div>
-          <div class="event_meta">{{getDateYear(meEvent)}} at {{getDateTime(meEvent)}}</div>
-          <div class="event_prev">{{getTime2PreviousMe(meEvent,index)}}</div>
-        </div>
-      </button>
-    </div>
+          <div class="event_body">
+            <div class="event_when"><span class="event_time">{{clockTime(item.meEvent.me_name)}}</span><span class="event_ago">{{getAgo(item.meEvent)}}</span></div>
+            <div v-if="getGap(item.index)" class="event_prev">{{getGap(item.index)}}</div>
+          </div>
+        </button>
+      </div>
+    </section>
 
-    <div v-if="loading" class="list_status">{{hasFilters(filters) ? 'Searching…' : 'Loading…'}}</div>
-    <div v-else-if="fileList.length === 0" class="list_status">{{hasFilters(filters) ? 'No events match these filters' : 'No events'}}</div>
+    <div v-if="loading" class="list_status">
+      <span class="spinner" aria-hidden="true"></span> {{fileList.length ? 'Loading more…' : 'Looking…'}}
+    </div>
+    <div v-else-if="fileList.length === 0" class="empty">
+      <div class="empty_title">{{hasFilters(filters) ? 'Nothing found' : 'No clips yet'}}</div>
+      <div v-if="hasFilters(filters)" class="empty_text">No clips match: {{describe(filters).charAt(0).toLowerCase() + describe(filters).slice(1)}}.</div>
+      <div class="empty_actions">
+        <button v-if="hasDate(filters)" class="btn btn_primary" @click="emit('clear-date')">Search all dates</button>
+        <button v-if="hasFilters(filters)" class="btn" @click="emit('clear-all')">Clear filters</button>
+      </div>
+    </div>
 
     <div class="load_more" v-if="hasMore && !loading && fileList.length > 0">
       <button class="btn" @click="getMore()">Load more</button>
@@ -39,13 +52,14 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
 import type { MeEvent } from '../ts/meevent';
 import { displayLabels, type MeOllama } from '../ts/meollama';
 import { MeEventImp } from '../ts/meeventimp';
 import { Utils } from '../ts/utils';
-import { hasFilters, type Filters } from '../ts/filters';
+import { describe, hasDate, hasFilters, type Filters } from '../ts/filters';
+import { agoText, clockTime, dayHeading, eventDay, gapText } from '../ts/when';
 import MeEventDetail from './MeEventDetail.vue';
 
 const props = withDefaults(defineProps<{
@@ -58,6 +72,11 @@ const props = withDefaults(defineProps<{
   minimumDuration: 2.0+2.0+2.0, // empty_start+2 seconds_of_video+empty_end
 });
 
+const emit = defineEmits<{
+  'clear-date': [];
+  'clear-all': [];
+}>();
+
 const fileList = ref<MeEvent[]>([]);
 const loading = ref(false);
 const hasMore = ref(true);
@@ -66,41 +85,40 @@ const currentMeEvent = ref<MeEvent>(MeEventImp.getNewEmptyMeEvent());
 const playerEl = ref<HTMLElement | null>(null);
 const ollamaByName = ref<Record<string, MeOllama|null>>({});
 
-function getTimePassedToMe(meEvent:MeEvent,_index:number):string {
-  let me = new MeEventImp(meEvent);
-  let timePassed = Date.now()-Utils.parseEventTime(me.getLastMeEventTime());
+// the clips grouped by day, newest first; index is the clip's place in the whole list
+const days = computed(() => {
+  const out: { key: string; heading: string; items: { meEvent: MeEvent; index: number }[] }[] = [];
+  fileList.value.forEach((meEvent, index) => {
+    const key = eventDay(meEvent.me_name);
+    if (out.length === 0 || out[out.length - 1]!.key !== key) out.push({ key, heading: dayHeading(key), items: [] });
+    out[out.length - 1]!.items.push({ meEvent, index });
+  });
+  return out;
+});
 
-  return(msToStringAgo(timePassed));
+function getAgo(meEvent:MeEvent):string {
+  return(agoText(Date.now() - Utils.parseEventTime(new MeEventImp(meEvent).getLastMeEventTime())));
 }
 
-function getTime2PreviousMe(meEvent:MeEvent,index:number):string {
-  let me = new MeEventImp(meEvent);
-  if(index<(fileList.value.length-1)) {
-    let nextMeEvent = new MeEventImp(fileList.value[index+1]!);
-    let timePassed = Utils.parseEventTime(me.getLastMeEventTime())-Utils.parseEventTime(nextMeEvent.getLastMeEventTime());
-    return(`previous event ${msToStringAgo(timePassed)}`);
-  } else {
-    return("last event");
-  }
+// "12 days since the one before": only when an animal is picked (how often do raccoons come?), and
+// nothing for the last clip in the list
+function getGap(index:number):string {
+  if(props.filters.labels.length === 0) return("");
+  const next = fileList.value[index + 1], cur = fileList.value[index];
+  if(!next || !cur) return("");
+  const ms = Utils.parseEventTime(new MeEventImp(cur).getLastMeEventTime()) - Utils.parseEventTime(new MeEventImp(next).getLastMeEventTime());
+  const one = props.filters.labels.length === 1 && props.filters.match === 'any' ? props.filters.labels[0] : '';
+  return(isNaN(ms) ? "" : `${gapText(ms)} since the previous ${one || 'one'}`);
 }
 
-function msToStringAgo(timePassed:number):string {
-  let timePassedString = "";
-  let seconsPassed = timePassed/1000;
-  let minutesPassed = seconsPassed/60;
-  let hoursPassed = minutesPassed/60;
-  let daysPassed = hoursPassed/24;
-
-  if(seconsPassed<60) timePassedString = `${ Math.round(seconsPassed)} seconds`;
-  else if(minutesPassed<10) timePassedString = `${ minutesPassed.toFixed(1)} minutes`;
-  else if(minutesPassed<60) timePassedString = `${ minutesPassed.toFixed(0)} minutes`;
-  else if(hoursPassed<4) timePassedString = `${ hoursPassed.toFixed(1)} hours`;
-  else if(hoursPassed<24) timePassedString = `${ hoursPassed.toFixed(0)} hours`;
-  else if(daysPassed<4) timePassedString = `${ daysPassed.toFixed(1)} days`;
-  else timePassedString = `${ daysPassed.toFixed(0)} days`;
-
-  return(timePassedString);
+// "17s", "1:05"
+function formatLength(seconds:number):string {
+  const s = Math.round(seconds);
+  return(s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
 }
+
+
+
 
 // Labels to show for an event, from its ollama classification
 function getTags(meEvent:MeEvent):string[] {
@@ -112,13 +130,7 @@ function onClassified(meEvent:MeEvent, ollama:MeOllama):void {
   ollamaByName.value[meEvent.me_name] = ollama;
 }
 
-function getDateTime(meEvent:MeEvent):string {
-  return(new Utils().getDateTime(meEvent));
-}
 
-function getDateYear(meEvent:MeEvent):string {
-  return(new Utils().getDateYear(meEvent));
-}
 
 function isDialogActive():boolean {
   return(dialogActive.value);
@@ -311,21 +323,86 @@ onBeforeUnmount(() => {
   padding: 12px 14px 14px;
 }
 
-.event_ago {
-  font-weight: 600;
+.event_when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 10px;
 }
 
-.event_meta {
+.event_time {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.event_ago {
   color: var(--text-muted);
   font-size: 0.88rem;
 }
 
 .event_prev {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  margin-top: 6px;
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+.day + .day {
+  margin-top: 28px;
+}
+
+.day_heading {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.empty_title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.empty_text {
+  max-width: 34rem;
+  color: var(--text-muted);
+}
+
+.empty_actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: -3px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
 }
 
 .list_status {

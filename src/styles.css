@@ -66,6 +66,17 @@ button {
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
 
+.btn_primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.btn_primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
 .btn:hover {
   border-color: var(--accent);
   background: var(--surface);
