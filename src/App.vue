@@ -10,7 +10,8 @@
       <h1 class="app_title">Home Cams</h1>
       <nav v-if="me" class="app_user">
         <span class="app_user_name" :title="me.email">{{ me.name || me.email }}</span>
-        <a v-if="me.admin" :href="CMO_SERVER + 'admin.html'">Access</a>
+        <a v-if="me.admin" :href="CMO_SERVER + 'admin.html'"
+          :title="pending ? pending + ' waiting for approval' : undefined">Access<span v-if="pending" class="app_pending">{{ pending }}</span></a>
         <button type="button" class="app_signout" @click="signOut">Sign out</button>
       </nav>
     </div>
@@ -54,7 +55,26 @@ async function signOut() {
   window.location.href = CMO_SERVER + 'signin.html';
 }
 // who is signed in, for the header (and what the event player offers)
-onMounted(loadMe);
+onMounted(async () => {
+  await loadMe();
+  loadPending();
+});
+
+// for an admin, how many people are waiting for approval, shown on the Access link;
+// checked again whenever the tab comes back into view (after approving someone in admin.html, say)
+const pending = ref(0);
+async function loadPending() {
+  if (!me.value?.admin) return;
+  try {
+    const response = await fetch(CMO_SERVER + 'auth/admin/requests', { credentials: 'same-origin' });
+    if (response.ok) pending.value = ((await response.json()).pending ?? []).length;
+  } catch {
+    // the server is unreachable; keep the last count
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadPending();
+});
 onMounted(async () => {
   try {
     const response = await fetch(CMO_SERVER + 'catcam/version');
@@ -124,6 +144,20 @@ onMounted(async () => {
   padding: 0;
   font: inherit;
   cursor: pointer;
+}
+
+.app_pending {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4em;
+  text-align: center;
 }
 
 .app_user_name {

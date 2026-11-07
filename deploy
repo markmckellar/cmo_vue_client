@@ -20,7 +20,7 @@ fi
 npm run build
 
 # clear out the previous build (assets/ from Vite, js/ and css/ from the old vue-cli build); movie.html is left alone
-rm -rf "$DEST/assets" "$DEST/js" "$DEST/css" "$DEST/index.html" "$DEST/favicon.ico"
+rm -rf "$DEST/assets" "$DEST/js" "$DEST/css" "$DEST/index.html" "$DEST/favicon.ico" "$DEST/favicon.svg" "$DEST/apple-touch-icon.png"
 mkdir -p "$DEST"
 cp -R dist/* "$DEST/"
 
