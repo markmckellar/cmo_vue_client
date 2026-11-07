@@ -65,7 +65,7 @@ export function filtersFromUrl(search: string = window.location.search): Filters
   return {
     cameras: list(p.get('cam')),
     labels: list(p.get('has')),
-    match: p.get('match') === 'all' ? 'all' : 'any',
+    match: list(p.get('has')).length > 1 ? 'all' : 'any',    // several labels: all of them in a clip
     without: list(p.get('not')),
     when: WHEN_CHOICES.some((c) => c.value === when) ? when as When : '',
     from: DATE.test(from) ? from : '',
@@ -79,7 +79,6 @@ export function filtersToUrl(f: Filters): void {
   for (const k of ['cam', 'has', 'match', 'not', 'when', 'from', 'to']) p.delete(k);
   if (f.cameras.length) p.set('cam', f.cameras.join(','));
   if (f.labels.length) p.set('has', f.labels.join(','));
-  if (f.labels.length > 1 && f.match === 'all') p.set('match', 'all');
   if (f.without.length) p.set('not', f.without.join(','));
   if (f.when) p.set('when', f.when);
   else {
@@ -131,6 +130,7 @@ function joinWords(words: string[], last: string): string {
 
 // One sentence saying what the list shows, e.g. "Cats or raccoons from the past week, with no people"
 export function describe(f: Filters): string {
+  // several labels are all needed in one clip: "Clips with a cat and a dog"
   let what = f.labels.length === 0 ? 'All clips'
     : f.labels.length > 1 && f.match === 'all' ? `Clips with ${joinWords(f.labels.map((l) => 'a ' + (l === 'person' ? 'person' : l)), 'and')} together`
     : joinWords(f.labels.map(plural), 'or');

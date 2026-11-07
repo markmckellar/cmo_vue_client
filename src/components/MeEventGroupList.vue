@@ -67,15 +67,6 @@
         </label>
       </div>
 
-      <!-- only when it matters: two or more animals picked -->
-      <div v-if="filters.labels.length > 1" class="match" role="radiogroup" aria-label="How to combine">
-        <span class="match_label">Show clips with</span>
-        <button type="button" class="match_option" :class="{ match_on: filters.match === 'any' }" role="radio" :aria-checked="filters.match === 'any'"
-          @click="setMatch('any')">{{filters.labels.length === 2 ? 'either one' : 'any of these'}}</button>
-        <button type="button" class="match_option" :class="{ match_on: filters.match === 'all' }" role="radio" :aria-checked="filters.match === 'all'"
-          @click="setMatch('all')">{{filters.labels.length === 2 ? 'both together' : 'all together'}}</button>
-      </div>
-
       <p class="summary" aria-live="polite">
         <span><span class="summary_label">Showing:</span> {{describe(filters)}}</span>
         <button v-if="hasFilters(filters)" type="button" class="link" @click="clearAll()">Clear filters</button>
@@ -92,12 +83,15 @@ import { me } from '../ts/me';
 import { MAIN_WHEN, WHEN_CHOICES, dateButtonText, describe, filtersFromUrl, filtersToUrl, hasDate, hasFilters, localDate, type Filters, type When } from '../ts/filters';
 import MeEventList from './MeEventList.vue';
 import { ALL_CAMERAS, cameraName } from '../ts/catcamservices';
+import type { MeGroup } from '../ts/megroup';
 
 const props = withDefaults(defineProps<{
   meGroupText: string;
   cameras?: string[];    // every camera the viewer has; filters.cameras is the ones picked ([] = all)
+  cameraInfo?: Record<string, MeGroup>;    // per camera, what the viewer may find there (labels, hidden)
 }>(), {
   cameras: () => [],
+  cameraInfo: () => ({}),
 });
 
 const filters = ref<Filters>(filtersFromUrl());
@@ -114,11 +108,22 @@ const choices = computed(() => {
     { label: 'person', text: 'People', color: '#2fb47c' },
     { label: 'delivery', text: 'Deliveries', color: '#e0613a' },
   ];
-  const showing = filters.value.cameras.length ? filters.value.cameras : props.cameras.length ? props.cameras : [props.meGroupText];
-  return all.filter((c) => (c.label !== 'delivery' || showing.some((cam) => cam.includes('porch')))
-    && (!me.value?.shownLabels || me.value.shownLabels.includes(c.label)));
+  // a button shows when some camera being looked at allows it (and stays while it's on, so it can be turned off)
+  return all.filter((c) => filters.value.labels.includes(c.label)
+    || (showing.value.some((cam) => mayFind(cam, c.label)) && (c.label !== 'delivery' || showing.value.some((cam) => cam.includes('porch')))));
 });
-const mayHidePeople = computed(() => !me.value?.animalsOnly && !filters.value.labels.includes('person'));
+// the cameras being looked at: the ones picked, else all of them
+const showing = computed(() => filters.value.cameras.length ? filters.value.cameras : props.cameras.length ? props.cameras : [props.meGroupText]);
+// may the viewer find clips with this label on this camera? From the server's per-camera grants; an older server
+// (no labels in megroups) falls back to what /auth/config says
+function mayFind(cam: string, label: string): boolean {
+  const c = props.cameraInfo[cam];
+  const labels = c && 'labels' in c ? c.labels : me.value?.shownLabels ?? null;
+  const hidden = c?.hidden ?? (me.value?.animalsOnly ? ['person', 'legs', 'delivery'] : []);
+  return (!labels || labels.includes(label)) && !hidden.includes(label);
+}
+// "Hide people" only where people can be seen at all
+const mayHidePeople = computed(() => !filters.value.labels.includes('person') && showing.value.some((cam) => mayFind(cam, 'person')));
 const hidingPeople = computed(() => filters.value.without.includes('person'));
 
 const mainWhen = WHEN_CHOICES.filter((c) => MAIN_WHEN.includes(c.value));
@@ -135,7 +140,8 @@ const today = localDate(new Date());
 
 function update(change: Partial<Filters>): void {
   filters.value = { ...filters.value, ...change };
-  if (filters.value.labels.length < 2) filters.value.match = 'any';
+  // picked labels must all be in a clip (cats and dogs: clips with both); cameras add up, times are one at a time
+  filters.value.match = filters.value.labels.length > 1 ? 'all' : 'any';
   filtersToUrl(filters.value);
 }
 
@@ -160,9 +166,6 @@ function toggle(label: string): void {
 }
 function toggleHidePeople(): void {
   update({ without: hidingPeople.value ? filters.value.without.filter((l) => l !== 'person') : [...filters.value.without, 'person'] });
-}
-function setMatch(match: 'any' | 'all'): void {
-  update({ match });
 }
 function setWhen(when: When): void {
   dateFrom.value = '';
@@ -299,34 +302,9 @@ function clearAll(): void {
 
 
 
-.match {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
 
-.match_label {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
 
-.match_option {
-  min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9rem;
-}
 
-.match_on {
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-}
 
 .summary {
   display: flex;
