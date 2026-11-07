@@ -22,14 +22,14 @@
         </div>
         <div class="event_body">
           <div class="event_ago">{{getTimePassedToMe(meEvent,index)}} ago</div>
-          <div class="event_meta">{{searchLabel ? `${getDateYear(meEvent)} ` : ""}}at {{getDateTime(meEvent)}}</div>
+          <div class="event_meta">{{getDateYear(meEvent)}} at {{getDateTime(meEvent)}}</div>
           <div class="event_prev">{{getTime2PreviousMe(meEvent,index)}}</div>
         </div>
       </button>
     </div>
 
-    <div v-if="loading" class="list_status">{{searchLabel ? 'Searching…' : 'Loading…'}}</div>
-    <div v-else-if="fileList.length === 0" class="list_status">{{searchLabel ? `No ${searchLabel} events found` : 'No events'}}</div>
+    <div v-if="loading" class="list_status">{{hasFilters(filters) ? 'Searching…' : 'Loading…'}}</div>
+    <div v-else-if="fileList.length === 0" class="list_status">{{hasFilters(filters) ? 'No events match these filters' : 'No events'}}</div>
 
     <div class="load_more" v-if="hasMore && !loading && fileList.length > 0">
       <button class="btn" @click="getMore()">Load more</button>
@@ -45,12 +45,12 @@ import type { MeEvent } from '../ts/meevent';
 import { displayLabels, type MeOllama } from '../ts/meollama';
 import { MeEventImp } from '../ts/meeventimp';
 import { Utils } from '../ts/utils';
+import { hasFilters, type Filters } from '../ts/filters';
 import MeEventDetail from './MeEventDetail.vue';
 
 const props = withDefaults(defineProps<{
   meGroupText: string;
-  meEventGroupText: string;
-  searchLabel?: string;
+  filters: Filters;
   howMayRecords?: number;
   minimumDuration?: number;
 }>(), {
@@ -59,7 +59,6 @@ const props = withDefaults(defineProps<{
 });
 
 const fileList = ref<MeEvent[]>([]);
-const startRecord = ref(0);
 const loading = ref(false);
 const hasMore = ref(true);
 const dialogActive = ref(false);
@@ -133,10 +132,7 @@ function closeDialog():void {
 // The event was deleted on the server: back to the list, without it
 function onDeleted(meEvent:MeEvent):void {
   closeDialog();
-  let before = fileList.value.length;
   fileList.value = fileList.value.filter((e) => e.me_name !== meEvent.me_name);
-  // startRecord counts the server's event folders, and there is now one fewer ahead of the next page
-  if(fileList.value.length < before && startRecord.value > 0) startRecord.value -= 1;
 }
 
 function getCurrentMovie():MeEvent {
@@ -165,28 +161,18 @@ function getRepImageSrc(meEvent:MeEvent):string {
 }
 
 function getMore():void {
-  console.log("moooooooooooooooore");
-  startRecord.value += props.howMayRecords;
   geMeEventList();
 }
 
+// Pages by the last event received, so a search can cover every date
 function geMeEventList(): void {
-  console.log(`geMeEventGroupList meGroup=${props.meGroupText} meGroupEvent=${props.meEventGroupText} searchLabel=${props.searchLabel}`);
   let catCamServices = new CatCamServices(CMO_SERVER);
-  // a search covers every date, so it pages by the last event received instead of by date
-  let request = props.searchLabel
-    ? catCamServices.searchMeEvents(
+  let request = catCamServices.searchMeEvents(
                             props.meGroupText,
-                            props.searchLabel,
+                            props.filters,
                             props.howMayRecords,
                             props.minimumDuration,
-                            fileList.value[fileList.value.length-1]?.me_name)
-    : catCamServices.getMeEventList(
-                            props.meGroupText,
-                            props.meEventGroupText,
-                            props.howMayRecords,
-                            startRecord.value,
-                            props.minimumDuration);
+                            fileList.value[fileList.value.length-1]?.me_name);
   loading.value = true;
   request.then((meEventList) => {
       fileList.value.push(...meEventList);
@@ -201,10 +187,8 @@ function geMeEventList(): void {
      } );
 }
 
-watch(() => props.meEventGroupText, (newVal: string) => {
-  console.log(`meEventGroupText:Changed!!v newVal=${newVal}`);
-  geMeEventList();
-}, { immediate: true });
+// the parent gives each set of filters its own list (:key), so this runs once per search
+geMeEventList();
 
 function onKeydown(e:KeyboardEvent):void {
   if(e.key === 'Escape') closeDialog();

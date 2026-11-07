@@ -1,5 +1,6 @@
 
 import type { Movie } from './movie';
+import { filtersToQuery, type Filters } from './filters';
 import type { MeGroup } from './megroup';
 import type { MeEventGroup } from './meeventgroup';
 import type { MeEvent } from './meevent';
@@ -85,15 +86,17 @@ export class CatCamServices {
       .then((res) => res.map((meEvent: any) => this.formatMeEvent(meEvent)));
     }
 
-  // Events on any date that ollama tagged with label (cat, dog, ...), newest first.
+  // Events that pass the filters (classifications, dates), newest first; no filters lists the newest events.
   // For the next page pass the me_name of the last event received as before.
   public searchMeEvents(
       meGroup:string,
-      label:string,
+      filters:Filters,
       howMayRecords:number,
       minimumDuration:number,
       before?:string): Promise<MeEvent[]> {
-    let url = `${this.catCamUrl}catcam/search/${meGroup}?label=${encodeURIComponent(label)}&howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}`;
+    let url = `${this.catCamUrl}catcam/search/${meGroup}?howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}`;
+    const query = filtersToQuery(filters);
+    if(query) url += '&' + query;
     if(before) url += `&before=${encodeURIComponent(before)}`;
     console.log(`searchMeEvents:url=${url}`);
 
