@@ -38,6 +38,10 @@
         <button v-if="otherDate" type="button" class="chip chip_on" :aria-label="`${dateButtonText(filters)}: tap to remove`" @click="setWhen('')">
           {{dateButtonText(filters)}} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
+        <button v-if="filters.match === 'all' && filters.labels.length > 1" type="button" class="chip chip_on"
+          aria-label="All in one clip: tap to remove" @click="setMatch('any')">
+          All in one clip <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
         <button v-if="hidingPeople" type="button" class="chip chip_on" aria-label="No people: tap to remove" @click="toggleHidePeople()">
           No people <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
@@ -60,6 +64,12 @@
           <button type="button" class="btn btn_primary" :disabled="!dateFrom && !dateTo" @click="applyDates()">Show</button>
           <div class="date_hint">Leave "To" empty for just one day.</div>
         </div>
+        <label v-if="choices.length > 1" class="switch" :class="{ switch_off: filters.labels.length < 2 }">
+          <input type="checkbox" :checked="filters.match === 'all' && filters.labels.length > 1" :disabled="filters.labels.length < 2"
+            @change="setMatch(filters.match === 'all' ? 'any' : 'all')">
+          <span class="switch_track" aria-hidden="true"><span class="switch_knob"></span></span>
+          <span>All in one clip <span class="switch_hint">{{filters.labels.length < 2 ? '(pick two or more first, e.g. Cats and Dogs)' : '(e.g. a cat and a dog together)'}}</span></span>
+        </label>
         <label v-if="mayHidePeople" class="switch">
           <input type="checkbox" :checked="hidingPeople" @change="toggleHidePeople()">
           <span class="switch_track" aria-hidden="true"><span class="switch_knob"></span></span>
@@ -140,8 +150,9 @@ const today = localDate(new Date());
 
 function update(change: Partial<Filters>): void {
   filters.value = { ...filters.value, ...change };
-  // picked labels must all be in a clip (cats and dogs: clips with both); cameras add up, times are one at a time
-  filters.value.match = filters.value.labels.length > 1 ? 'all' : 'any';
+  // like shopping and photo sites: choices of one kind add up (Cats + Dogs: clips of either), kinds narrow each
+  // other (camera x animal x time). "All in one clip" (under More) turns animals into clips with all of them.
+  if (filters.value.labels.length < 2) filters.value.match = 'any';
   filtersToUrl(filters.value);
 }
 
@@ -163,6 +174,9 @@ function toggle(label: string): void {
   // picking People undoes "Hide people"
   const without = label === 'person' && !on ? filters.value.without.filter((l) => l !== 'person') : filters.value.without;
   update({ labels, without });
+}
+function setMatch(match: 'any' | 'all'): void {
+  update({ match });
 }
 function toggleHidePeople(): void {
   update({ without: hidingPeople.value ? filters.value.without.filter((l) => l !== 'person') : [...filters.value.without, 'person'] });
@@ -414,6 +428,16 @@ function clearAll(): void {
   border-top: 1px solid var(--border);
   font-size: 1rem;
   cursor: pointer;
+}
+
+.switch_off {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.switch_hint {
+  color: var(--text-muted);
+  font-size: 0.88rem;
 }
 
 .switch input {
