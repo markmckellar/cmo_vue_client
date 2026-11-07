@@ -28,6 +28,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { me, loadMe } from './ts/me';
 import MeGroupList from './components/MeGroupList.vue';
 import LinkedEvent from './components/LinkedEvent.vue';
 import { CMO_SERVER } from './ts/catcamservices';
@@ -48,20 +49,12 @@ if (linked) {
 const CLIENT_CODE = __CMO_CODE__;
 const serverCode = ref('');
 
-// who is signed in (a server in google mode), for the header; nothing on a server at home (open mode)
-const me = ref<{ email: string; name?: string; admin?: boolean } | null>(null);
 async function signOut() {
   await fetch(CMO_SERVER + 'auth/logout', { method: 'POST', credentials: 'same-origin' });
   window.location.href = CMO_SERVER + 'signin.html';
 }
-onMounted(async () => {
-  try {
-    const cfg = await (await fetch(CMO_SERVER + 'auth/config', { credentials: 'same-origin' })).json();
-    if (cfg.caller === 'person') me.value = { email: cfg.email, name: cfg.name, admin: cfg.admin };
-  } catch {
-    // an older server without /auth/config: no sign-in
-  }
-});
+// who is signed in, for the header (and what the event player offers)
+onMounted(loadMe);
 onMounted(async () => {
   try {
     const response = await fetch(CMO_SERVER + 'catcam/version');

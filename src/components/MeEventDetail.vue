@@ -19,13 +19,14 @@
       </div>
       <!-- top middle; touching it changes the classification. Hidden until the classification has loaded -->
       <div class="detail_tags_row">
-        <button v-if="ollama !== undefined" class="detail_tags" @click="askClassify()" aria-label="Change classification" title="Change classification">
+        <button v-if="ollama !== undefined" class="detail_tags" :disabled="!mayRelabel()" @click="askClassify()"
+            :aria-label="mayRelabel() ? 'Change classification' : 'Classification'" :title="mayRelabel() ? 'Change classification' : ''">
           <span v-for="tag in tags" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
           <span v-if="tags.length === 0" class="event_tag tag_none">unclassified</span>
-          <svg class="detail_tags_edit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+          <svg v-if="mayRelabel()" class="detail_tags_edit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
         </button>
       </div>
-      <button class="detail_delete" @click="askDelete()" aria-label="Delete event" title="Delete event">
+      <button v-if="mayDelete()" class="detail_delete" @click="askDelete()" aria-label="Delete event" title="Delete event">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" /></svg>
       </button>
     </div>
@@ -55,6 +56,7 @@ import type { MeEvent } from '../ts/meevent';
 import { displayLabels, type MeOllama } from '../ts/meollama';
 import ClassifyDialog from './ClassifyDialog.vue';
 import { Utils } from '../ts/utils';
+import { mayRelabel, mayDelete } from '../ts/me';
 
 const props = defineProps<{
   meEvent: MeEvent;
@@ -234,6 +236,12 @@ function getMovieSrc():string {
 .detail_tags:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* view-only people see the labels but can't change them */
+.detail_tags:disabled {
+  cursor: default;
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .detail_tags_edit {
