@@ -1,6 +1,6 @@
 <template>
   <div class="cmo_source">
-    <!-- one camera at a time; :key starts the event list over when the camera changes -->
+    <!-- all cameras (the default) or one; :key starts the event list over when the camera changes -->
     <MeEventGroupList v-if="selectedMeGroup" :meGroupText="selectedMeGroup" :key="selectedMeGroup">
       <template #title>
         <!-- one camera (e.g. a friend): just its name; more: a picker -->
@@ -8,6 +8,7 @@
         <label v-else class="camera_picker">
           <span class="camera_label">Camera</span>
           <select class="select camera_select" v-model="selectedMeGroup" aria-label="Camera">
+            <option :value="ALL_CAMERAS">All cameras</option>
             <option v-for="meGroup in fileList" :key="meGroup.meGroup" :value="meGroup.meGroup">
               {{cameraName(meGroup.meGroup)}}
             </option>
@@ -21,20 +22,16 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
+import { ALL_CAMERAS, CatCamServices, CMO_SERVER, cameraName } from '../ts/catcamservices';
 import type { MeGroup } from '../ts/megroup';
 import MeEventGroupList from './MeEventGroupList.vue';
 
-const STORAGE_KEY = 'cmo_selected_camera';
+// a new key, so everyone starts on "All cameras" once; after that, their pick is remembered
+const STORAGE_KEY = 'cmo_camera';
 
 const fileList = ref<MeGroup[]>([]);
 const selectedMeGroup = ref("");
 const loaded = ref(false);
-
-function cameraName(meGroup: string): string {
-  const name = meGroup.replace(/_/g, " ");
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
 
 function rememberedCamera(): string {
   try {
@@ -60,7 +57,10 @@ function geMeGroupList(): void {
     fileList.value = meGroupList.filter((meGroup) => !meGroup.meGroup.includes("."));
     const names = fileList.value.map((meGroup) => meGroup.meGroup);
     const remembered = rememberedCamera();
-    selectedMeGroup.value = names.includes(remembered) ? remembered : (names[0] ?? "");
+    // one camera (a friend): that one; more: the remembered pick, else all of them
+    selectedMeGroup.value = names.length === 1 ? names[0]!
+      : names.includes(remembered) || (remembered === ALL_CAMERAS && names.length > 1) ? remembered
+      : names.length ? ALL_CAMERAS : "";
     loaded.value = true;
     console.log("geMeGroupList="+JSON.stringify(meGroupList));
   });

@@ -2,7 +2,7 @@
   <section class="cmo_event_group">
     <div class="group_header">
       <!-- MeGroupList puts its camera picker here -->
-      <slot name="title"><h2 class="group_title">{{meGroupText.replace(/_/g, " ")}}</h2></slot>
+      <slot name="title"><h2 class="group_title">{{meGroupText === ALL_CAMERAS ? 'All cameras' : meGroupText.replace(/_/g, " ")}}</h2></slot>
     </div>
 
     <!-- Filters the way shopping and photo apps do them: the main choices are plain words on big buttons, all
@@ -82,6 +82,7 @@ import { computed, ref } from 'vue';
 import { me, ANIMAL_LABELS } from '../ts/me';
 import { MAIN_WHEN, WHEN_CHOICES, dateButtonText, describe, filtersFromUrl, filtersToUrl, hasDate, hasFilters, localDate, type Filters, type When } from '../ts/filters';
 import MeEventList from './MeEventList.vue';
+import { ALL_CAMERAS } from '../ts/catcamservices';
 
 const props = defineProps<{
   meGroupText: string;
@@ -101,7 +102,7 @@ const choices = computed(() => {
     { label: 'person', text: 'People', color: '#2fb47c' },
     { label: 'delivery', text: 'Deliveries', color: '#e0613a' },
   ];
-  return all.filter((c) => (c.label !== 'delivery' || props.meGroupText.includes('porch'))
+  return all.filter((c) => (c.label !== 'delivery' || props.meGroupText.includes('porch') || props.meGroupText === ALL_CAMERAS)
     && (!me.value?.animalsOnly || ANIMAL_LABELS.includes(c.label)));
 });
 const mayHidePeople = computed(() => !me.value?.animalsOnly && !filters.value.labels.includes('person'));

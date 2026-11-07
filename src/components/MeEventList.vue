@@ -26,6 +26,7 @@
           </div>
           <div class="event_body">
             <div class="event_when"><span class="event_time">{{clockTime(item.meEvent.me_name)}}</span><span class="event_ago">{{getAgo(item.meEvent)}}</span></div>
+            <div v-if="meGroupText === ALL_CAMERAS" class="event_camera">{{cameraName(item.meEvent.me_group)}}</div>
             <div v-if="getGap(item.index)" class="event_prev">{{getGap(item.index)}}</div>
           </div>
         </button>
@@ -53,7 +54,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
+import { ALL_CAMERAS, CatCamServices, CMO_SERVER, cameraName } from '../ts/catcamservices';
 import type { MeEvent } from '../ts/meevent';
 import { displayLabels, type MeOllama } from '../ts/meollama';
 import { MeEventImp } from '../ts/meeventimp';
@@ -338,6 +339,12 @@ onBeforeUnmount(() => {
 }
 
 .event_ago {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.event_camera {
+  margin-top: 2px;
   color: var(--text-muted);
   font-size: 0.88rem;
 }

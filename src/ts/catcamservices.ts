@@ -32,6 +32,15 @@ export async function apiFetch(url: string, init?: RequestInit): Promise<Respons
   return res;
 }
 
+// The camera picker's "All cameras": searches every camera the viewer may see, newest first
+export const ALL_CAMERAS = '*';
+
+// "pet_door" -> "Pet door"
+export function cameraName(meGroup: string): string {
+  const name = meGroup.replace(/_/g, " ");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 export class CatCamServices {
    public catCamUrl:string;
 
@@ -96,7 +105,8 @@ export class CatCamServices {
       before?:string): Promise<MeEvent[]> {
     // brief: without me_delta_array (one entry per frame, up to ~650 KB for a long night clip), with its
     // count and first and last times instead
-    let url = `${this.catCamUrl}catcam/search/${meGroup}?howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}&brief=true`;
+    const where = meGroup === ALL_CAMERAS ? 'catcam/search' : `catcam/search/${meGroup}`;
+    let url = `${this.catCamUrl}${where}?howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}&brief=true`;
     const query = filtersToQuery(filters);
     if(query) url += '&' + query;
     if(before) url += `&before=${encodeURIComponent(before)}`;
