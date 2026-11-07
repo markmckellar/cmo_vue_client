@@ -1,7 +1,8 @@
 <template>
   <section class="cmo_event_group">
-    <div class="group_header">
-      <!-- MeGroupList puts its camera picker here -->
+    <!-- a heading only for a single camera; with several, the cameras are filter buttons -->
+    <div v-if="cameras.length <= 1" class="group_header">
+      <!-- MeGroupList puts the camera's name here -->
       <slot name="title"><h2 class="group_title">{{meGroupText === ALL_CAMERAS ? 'All cameras' : meGroupText.replace(/_/g, " ")}}</h2></slot>
     </div>
 
@@ -16,6 +17,14 @@
       <div class="chip_row" role="group" aria-label="Filters">
         <button type="button" class="chip" :class="{ chip_on: !hasFilters(filters) }" :aria-pressed="!hasFilters(filters)"
           @click="clearAll()">All</button>
+        <!-- cameras first, all on to start (like Ring or Nest): tap one off to leave it out; a camera icon marks them -->
+        <template v-if="cameras.length > 1">
+          <button v-for="cam in cameras" :key="'cam:' + cam" type="button" class="chip chip_camera" :class="{ chip_on: cameraOn(cam) }"
+            :aria-pressed="cameraOn(cam)" @click="toggleCamera(cam)">
+            <svg class="chip_icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 8-6 4 6 4V8Z" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg>
+            {{cameraName(cam)}}
+          </button>
+        </template>
         <button v-for="c in choices" :key="c.label" type="button" class="chip" :class="{ chip_on: filters.labels.includes(c.label) }"
           :aria-pressed="filters.labels.includes(c.label)" @click="toggle(c.label)">
           <template v-if="filters.labels.includes(c.label)"><svg class="chip_tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7" /></svg></template>
@@ -82,11 +91,14 @@ import { computed, ref } from 'vue';
 import { me } from '../ts/me';
 import { MAIN_WHEN, WHEN_CHOICES, dateButtonText, describe, filtersFromUrl, filtersToUrl, hasDate, hasFilters, localDate, type Filters, type When } from '../ts/filters';
 import MeEventList from './MeEventList.vue';
-import { ALL_CAMERAS } from '../ts/catcamservices';
+import { ALL_CAMERAS, cameraName } from '../ts/catcamservices';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   meGroupText: string;
-}>();
+  cameras?: string[];    // every camera the viewer has; filters.cameras is the ones picked ([] = all)
+}>(), {
+  cameras: () => [],
+});
 
 const filters = ref<Filters>(filtersFromUrl());
 // a new list (and a new search) whenever the filters change
@@ -102,7 +114,8 @@ const choices = computed(() => {
     { label: 'person', text: 'People', color: '#2fb47c' },
     { label: 'delivery', text: 'Deliveries', color: '#e0613a' },
   ];
-  return all.filter((c) => (c.label !== 'delivery' || props.meGroupText.includes('porch') || props.meGroupText === ALL_CAMERAS)
+  const showing = filters.value.cameras.length ? filters.value.cameras : props.cameras.length ? props.cameras : [props.meGroupText];
+  return all.filter((c) => (c.label !== 'delivery' || showing.some((cam) => cam.includes('porch')))
     && (!me.value?.shownLabels || me.value.shownLabels.includes(c.label)));
 });
 const mayHidePeople = computed(() => !me.value?.animalsOnly && !filters.value.labels.includes('person'));
@@ -124,6 +137,18 @@ function update(change: Partial<Filters>): void {
   filters.value = { ...filters.value, ...change };
   if (filters.value.labels.length < 2) filters.value.match = 'any';
   filtersToUrl(filters.value);
+}
+
+// cameras: none picked means all of them, so all show as on to start
+function cameraOn(cam: string): boolean {
+  return filters.value.cameras.length === 0 || filters.value.cameras.includes(cam);
+}
+function toggleCamera(cam: string): void {
+  const on = filters.value.cameras.length ? filters.value.cameras : props.cameras;
+  let next = on.includes(cam) ? on.filter((c) => c !== cam) : [...on, cam];
+  // all of them, or (turning off the last one) none: back to "all cameras"
+  if (next.length === 0 || props.cameras.every((c) => next.includes(c))) next = [];
+  update({ cameras: next.filter((c) => props.cameras.includes(c)) });
 }
 
 function toggle(label: string): void {
@@ -154,7 +179,7 @@ function applyDates(): void {
 function clearAll(): void {
   dateFrom.value = '';
   dateTo.value = '';
-  update({ labels: [], match: 'any', without: [], when: '', from: '', to: '' });
+  update({ cameras: [], labels: [], match: 'any', without: [], when: '', from: '', to: '' });
 }
 
 </script>
@@ -236,6 +261,10 @@ function clearAll(): void {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-contrast);
+}
+
+.chip_icon {
+  margin-left: -2px;
 }
 
 .chip_tick {

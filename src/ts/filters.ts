@@ -5,6 +5,7 @@
 export type When = '' | 'today' | 'yesterday' | '7d' | '30d';
 
 export type Filters = {
+  cameras: string[];       // only these cameras; [] for all of them (the default)
   labels: string[];        // show clips with these classifications
   match: 'any' | 'all';    // any one of the labels, or all of them in the same clip
   without: string[];       // and none of these (in the app: "Hide people")
@@ -13,7 +14,7 @@ export type Filters = {
   to: string;              // chosen last date, yyyy-mm-dd; '' for no limit
 };
 
-export const NO_FILTERS: Filters = { labels: [], match: 'any', without: [], when: '', from: '', to: '' };
+export const NO_FILTERS: Filters = { cameras: [], labels: [], match: 'any', without: [], when: '', from: '', to: '' };
 
 export const WHEN_CHOICES: { value: When; text: string }[] = [
   { value: 'today', text: 'Today' },
@@ -43,7 +44,7 @@ export function hasDate(f: Filters): boolean {
 }
 
 export function hasFilters(f: Filters): boolean {
-  return f.labels.length > 0 || f.without.length > 0 || hasDate(f);
+  return f.cameras.length > 0 || f.labels.length > 0 || f.without.length > 0 || hasDate(f);
 }
 
 // The dates to search, yyyy-mm-dd ('' for no limit), with a quick choice worked out from today
@@ -62,6 +63,7 @@ export function filtersFromUrl(search: string = window.location.search): Filters
   const from = p.get('from') ?? '', to = p.get('to') ?? '';
   const when = p.get('when') ?? '';
   return {
+    cameras: list(p.get('cam')),
     labels: list(p.get('has')),
     match: p.get('match') === 'all' ? 'all' : 'any',
     without: list(p.get('not')),
@@ -74,7 +76,8 @@ export function filtersFromUrl(search: string = window.location.search): Filters
 // Puts the filters in the address without reloading; other parameters and the #/event link are kept
 export function filtersToUrl(f: Filters): void {
   const p = new URLSearchParams(window.location.search);
-  for (const k of ['has', 'match', 'not', 'when', 'from', 'to']) p.delete(k);
+  for (const k of ['cam', 'has', 'match', 'not', 'when', 'from', 'to']) p.delete(k);
+  if (f.cameras.length) p.set('cam', f.cameras.join(','));
   if (f.labels.length) p.set('has', f.labels.join(','));
   if (f.labels.length > 1 && f.match === 'all') p.set('match', 'all');
   if (f.without.length) p.set('not', f.without.join(','));
@@ -91,6 +94,7 @@ export function filtersToUrl(f: Filters): void {
 export function filtersToQuery(f: Filters): string {
   const p: string[] = [];
   const { from, to } = dateRange(f);
+  if (f.cameras.length) p.push('cameras=' + encodeURIComponent(f.cameras.join(',')));
   if (f.labels.length) p.push('labels=' + encodeURIComponent(f.labels.join(',')));
   if (f.labels.length > 1 && f.match === 'all') p.push('match=all');
   if (f.without.length) p.push('without=' + encodeURIComponent(f.without.join(',')));
@@ -138,5 +142,6 @@ export function describe(f: Filters): string {
   else if (f.from) when = ` since ${showDate(f.from)}`;
   else if (f.to) when = ` until ${showDate(f.to)}`;
   const without = f.without.length ? `, with no ${joinWords(f.without.map(plural), 'or')}` : '';
-  return what + when + without;
+  const where = f.cameras.length ? ` on the ${joinWords(f.cameras.map((c) => c.replace(/_/g, ' ')), 'and')}` : '';
+  return what + where + when + without;
 }

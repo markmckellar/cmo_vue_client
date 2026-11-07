@@ -26,7 +26,7 @@
         <div class="event_body">
           <div class="event_day">{{dayHeading(eventDay(meEvent.me_name))}}</div>
           <div class="event_when"><span class="event_time">{{clockTime(meEvent.me_name)}}</span><span class="event_ago">{{getAgo(meEvent)}}</span></div>
-          <div v-if="meGroupText === ALL_CAMERAS" class="event_camera">{{cameraName(meEvent.me_group)}}</div>
+          <div v-if="meGroupText === ALL_CAMERAS && filters.cameras.length !== 1" class="event_camera">{{cameraName(meEvent.me_group)}}</div>
           <div v-if="getGap(index)" class="event_prev">{{getGap(index)}}</div>
         </div>
       </button>
