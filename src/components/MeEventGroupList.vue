@@ -79,7 +79,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { me, ANIMAL_LABELS } from '../ts/me';
+import { me } from '../ts/me';
 import { MAIN_WHEN, WHEN_CHOICES, dateButtonText, describe, filtersFromUrl, filtersToUrl, hasDate, hasFilters, localDate, type Filters, type When } from '../ts/filters';
 import MeEventList from './MeEventList.vue';
 import { ALL_CAMERAS } from '../ts/catcamservices';
@@ -92,8 +92,8 @@ const filters = ref<Filters>(filtersFromUrl());
 // a new list (and a new search) whenever the filters change
 const listKey = computed(() => JSON.stringify(filters.value));
 
-// The buttons, in the words people use. Deliveries only for a porch camera; friends (animals only) get only
-// the animals. "Person" also finds the AI's "legs" (the server matches both).
+// The buttons, in the words people use. Deliveries only for a porch camera; someone limited to some kinds of
+// clips (friends: animals only) gets only those. "Person" also finds the AI's "legs" (the server matches both).
 const choices = computed(() => {
   const all = [
     { label: 'cat', text: 'Cats', color: 'var(--accent)' },
@@ -103,7 +103,7 @@ const choices = computed(() => {
     { label: 'delivery', text: 'Deliveries', color: '#e0613a' },
   ];
   return all.filter((c) => (c.label !== 'delivery' || props.meGroupText.includes('porch') || props.meGroupText === ALL_CAMERAS)
-    && (!me.value?.animalsOnly || ANIMAL_LABELS.includes(c.label)));
+    && (!me.value?.shownLabels || me.value.shownLabels.includes(c.label)));
 });
 const mayHidePeople = computed(() => !me.value?.animalsOnly && !filters.value.labels.includes('person'));
 const hidingPeople = computed(() => filters.value.without.includes('person'));
