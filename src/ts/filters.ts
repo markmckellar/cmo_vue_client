@@ -18,9 +18,12 @@ export const NO_FILTERS: Filters = { labels: [], match: 'any', without: [], when
 export const WHEN_CHOICES: { value: When; text: string }[] = [
   { value: 'today', text: 'Today' },
   { value: 'yesterday', text: 'Yesterday' },
-  { value: '7d', text: 'Last 7 days' },
-  { value: '30d', text: 'Last 30 days' },
+  { value: '7d', text: 'Past week' },
+  { value: '30d', text: 'Past month' },
 ];
+
+// the ones on the main row of buttons; the rest wait under "More filters"
+export const MAIN_WHEN: When[] = ['today', 'yesterday', '7d'];
 
 const DATE = /^\d{4}-\d\d-\d\d$/;
 const list = (v: string | null) => (v ?? '').split(',').map((s) => s.trim().toLowerCase()).filter((s) => s);
@@ -122,7 +125,7 @@ function joinWords(words: string[], last: string): string {
   return words.length < 2 ? (words[0] ?? '') : words.slice(0, -1).join(', ') + ` ${last} ` + words[words.length - 1];
 }
 
-// One sentence saying what the list shows, e.g. "Cats or raccoons from the last 7 days, with no people"
+// One sentence saying what the list shows, e.g. "Cats or raccoons from the past week, with no people"
 export function describe(f: Filters): string {
   let what = f.labels.length === 0 ? 'All clips'
     : f.labels.length > 1 && f.match === 'all' ? `Clips with ${joinWords(f.labels.map((l) => 'a ' + (l === 'person' ? 'person' : l)), 'and')} together`

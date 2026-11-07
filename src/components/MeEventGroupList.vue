@@ -28,6 +28,16 @@
           @click="setMatch('all')">{{filters.labels.length === 2 ? 'both together' : 'all together'}}</button>
       </div>
 
+      <!-- when: a segmented control (the joined "pick one" bar phones use), so it reads as its own question,
+           apart from the animal buttons. A rarer date from More filters leaves none of these picked and says so
+           in the "Showing" line. -->
+      <div class="segments" role="radiogroup" aria-label="When">
+        <button type="button" class="segment" :class="{ segment_on: !hasDate(filters) }" role="radio" :aria-checked="!hasDate(filters)"
+          @click="setWhen('')">Any time</button>
+        <button v-for="c in mainWhen" :key="c.value" type="button" class="segment" :class="{ segment_on: filters.when === c.value }" role="radio"
+          :aria-checked="filters.when === c.value" @click="setWhen(filters.when === c.value ? '' : c.value)">{{c.text}}</button>
+      </div>
+
       <p class="summary" aria-live="polite">
         <span><span class="summary_label">Showing:</span> {{describe(filters)}}</span>
         <button v-if="hasFilters(filters)" type="button" class="link" @click="clearAll()">Clear filters</button>
@@ -38,11 +48,10 @@
       </p>
 
       <div v-if="moreOpen" class="more">
-        <div class="more_title">When</div>
-        <div class="chip_row" role="group" aria-label="When">
-          <button type="button" class="chip chip_small" :class="{ chip_on: !hasDate(filters) }" @click="setWhen('')">Any time</button>
-          <button v-for="c in WHEN_CHOICES" :key="c.value" type="button" class="chip chip_small" :class="{ chip_on: filters.when === c.value }"
-            @click="setWhen(c.value)">{{c.text}}</button>
+        <div class="more_title">Other dates</div>
+        <div class="chip_row" role="group" aria-label="More dates">
+          <button v-for="c in moreWhen" :key="c.value" type="button" class="chip chip_small" :class="{ chip_on: filters.when === c.value }"
+            @click="setWhen(filters.when === c.value ? '' : c.value)">{{c.text}}</button>
           <button type="button" class="chip chip_small" :class="{ chip_on: !!(filters.from || filters.to) }" :aria-expanded="picking"
             @click="picking = !picking">{{filters.from || filters.to ? dateButtonText(filters) : 'Pick dates…'}}</button>
         </div>
@@ -68,7 +77,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { me, ANIMAL_LABELS } from '../ts/me';
-import { WHEN_CHOICES, dateButtonText, describe, filtersFromUrl, filtersToUrl, hasDate, hasFilters, localDate, type Filters, type When } from '../ts/filters';
+import { MAIN_WHEN, WHEN_CHOICES, dateButtonText, describe, filtersFromUrl, filtersToUrl, hasDate, hasFilters, localDate, type Filters, type When } from '../ts/filters';
 import MeEventList from './MeEventList.vue';
 
 const props = defineProps<{
@@ -95,10 +104,15 @@ const choices = computed(() => {
 const mayHidePeople = computed(() => !me.value?.animalsOnly && !filters.value.labels.includes('person'));
 const hidingPeople = computed(() => filters.value.without.includes('person'));
 
-// "More filters" (dates, hiding people): closed unless asked for; the count says how many are on
+const mainWhen = WHEN_CHOICES.filter((c) => MAIN_WHEN.includes(c.value));
+const moreWhen = WHEN_CHOICES.filter((c) => !MAIN_WHEN.includes(c.value));
+// a date chosen under More filters (Past month, picked dates)
+const otherDate = computed(() => hasDate(filters.value) && !MAIN_WHEN.includes(filters.value.when));
+
+// "More filters" (rarer dates, hiding people): closed unless asked for; the count says how many are on
 const moreOpen = ref(false);
 const picking = ref(!!(filters.value.from || filters.value.to));
-const moreCount = computed(() => (hasDate(filters.value) ? 1 : 0) + (hidingPeople.value ? 1 : 0));
+const moreCount = computed(() => (otherDate.value ? 1 : 0) + (hidingPeople.value ? 1 : 0));
 const dateFrom = ref(filters.value.from);
 const dateTo = ref(filters.value.to === filters.value.from ? '' : filters.value.to);
 const today = localDate(new Date());
@@ -182,16 +196,58 @@ function clearAll(): void {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.segments {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  max-width: 520px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.segment {
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segment:hover {
+  color: var(--text);
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.segment_on,
+.segment_on:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .chip {
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-height: 46px;
-  padding: 0 18px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface-2);

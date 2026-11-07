@@ -97,6 +97,14 @@ onMounted(async () => {
 
 .app_title {
   font-size: 1.2rem;
+  white-space: nowrap;
+}
+
+/* a narrow phone: just Access and Sign out, so the header stays on one line */
+@media (max-width: 480px) {
+  .app_user_name {
+    display: none;
+  }
 }
 
 .app_user {
