@@ -21,7 +21,7 @@
       <div class="detail_tags_row">
         <button v-if="ollama !== undefined" class="detail_tags" :disabled="!mayRelabel()" @click="askClassify()"
             :aria-label="mayRelabel() ? 'Change classification' : 'Classification'" :title="mayRelabel() ? 'Change classification' : ''">
-          <span v-for="tag in tags" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
+          <span v-for="tag in tags" :key="tag" class="event_tag" :class="`tag_${tag}`"><LabelIcon :label="tag" :size="13" />{{tag}}</span>
           <span v-if="tags.length === 0" class="event_tag tag_none">unclassified</span>
           <svg v-if="mayRelabel()" class="detail_tags_edit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
         </button>
@@ -55,6 +55,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import type { MeEvent } from '../ts/meevent';
 import { displayLabels, type MeOllama } from '../ts/meollama';
 import ClassifyDialog from './ClassifyDialog.vue';
+import LabelIcon from './LabelIcon.vue';
 import { Utils } from '../ts/utils';
 import { mayRelabel, mayDelete } from '../ts/me';
 

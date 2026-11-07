@@ -20,7 +20,7 @@
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
             </span>
             <div class="event_tags" v-if="getTags(item.meEvent).length">
-              <span v-for="tag in getTags(item.meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`">{{tag}}</span>
+              <span v-for="tag in getTags(item.meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`"><LabelIcon :label="tag" :size="13" />{{tag}}</span>
             </div>
             <span class="event_duration">{{formatLength(item.meEvent.me_time)}}</span>
           </div>
@@ -61,6 +61,7 @@ import { Utils } from '../ts/utils';
 import { describe, hasDate, hasFilters, type Filters } from '../ts/filters';
 import { agoText, clockTime, dayHeading, eventDay, gapText } from '../ts/when';
 import MeEventDetail from './MeEventDetail.vue';
+import LabelIcon from './LabelIcon.vue';
 
 const props = withDefaults(defineProps<{
   meGroupText: string;
