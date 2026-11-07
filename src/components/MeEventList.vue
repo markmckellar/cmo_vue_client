@@ -8,30 +8,29 @@
       </div>
     </Transition>
 
-    <!-- grouped by day, like a photo app: Today, Yesterday, Wed, Nov 4 -->
-    <section v-for="day in days" :key="day.key" class="day">
-      <h3 class="day_heading">{{day.heading}}</h3>
-      <div class="event_grid">
-        <button class="event_card" v-for="item in day.items" :key="item.meEvent.me_name" @click="watchMovie(item.meEvent)"
-          :aria-label="`${getTags(item.meEvent).join(', ') || 'Clip'}, ${day.heading} at ${clockTime(item.meEvent.me_name)}`">
-          <div class="event_thumb">
-            <img v-bind:src="getRepImageSrc(item.meEvent)" alt="" loading="lazy">
-            <span class="event_play" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
-            </span>
-            <div class="event_tags" v-if="getTags(item.meEvent).length">
-              <span v-for="tag in getTags(item.meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`"><LabelIcon :label="tag" :size="13" />{{tag}}</span>
-            </div>
-            <span class="event_duration">{{formatLength(item.meEvent.me_time)}}</span>
+    <!-- one grid with no gaps (days with a single clip left holes when each day had its own row); each card
+         says its own day: Today, Yesterday, Thu, Oct 15 -->
+    <div class="event_grid">
+      <button class="event_card" v-for="(meEvent, index) in fileList" :key="meEvent.me_name" @click="watchMovie(meEvent)"
+        :aria-label="`${getTags(meEvent).join(', ') || 'Clip'}, ${dayHeading(eventDay(meEvent.me_name))} at ${clockTime(meEvent.me_name)}`">
+        <div class="event_thumb">
+          <img v-bind:src="getRepImageSrc(meEvent)" alt="" loading="lazy">
+          <span class="event_play" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" /></svg>
+          </span>
+          <div class="event_tags" v-if="getTags(meEvent).length">
+            <span v-for="tag in getTags(meEvent)" :key="tag" class="event_tag" :class="`tag_${tag}`"><LabelIcon :label="tag" :size="13" />{{tag}}</span>
           </div>
-          <div class="event_body">
-            <div class="event_when"><span class="event_time">{{clockTime(item.meEvent.me_name)}}</span><span class="event_ago">{{getAgo(item.meEvent)}}</span></div>
-            <div v-if="meGroupText === ALL_CAMERAS" class="event_camera">{{cameraName(item.meEvent.me_group)}}</div>
-            <div v-if="getGap(item.index)" class="event_prev">{{getGap(item.index)}}</div>
-          </div>
-        </button>
-      </div>
-    </section>
+          <span class="event_duration">{{formatLength(meEvent.me_time)}}</span>
+        </div>
+        <div class="event_body">
+          <div class="event_day">{{dayHeading(eventDay(meEvent.me_name))}}</div>
+          <div class="event_when"><span class="event_time">{{clockTime(meEvent.me_name)}}</span><span class="event_ago">{{getAgo(meEvent)}}</span></div>
+          <div v-if="meGroupText === ALL_CAMERAS" class="event_camera">{{cameraName(meEvent.me_group)}}</div>
+          <div v-if="getGap(index)" class="event_prev">{{getGap(index)}}</div>
+        </div>
+      </button>
+    </div>
 
     <div v-if="loading" class="list_status">
       <span class="spinner" aria-hidden="true"></span> {{fileList.length ? 'Loading more…' : 'Looking…'}}
@@ -53,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { ALL_CAMERAS, CatCamServices, CMO_SERVER, cameraName } from '../ts/catcamservices';
 import type { MeEvent } from '../ts/meevent';
 import { displayLabels, type MeOllama } from '../ts/meollama';
@@ -87,16 +86,6 @@ const currentMeEvent = ref<MeEvent>(MeEventImp.getNewEmptyMeEvent());
 const playerEl = ref<HTMLElement | null>(null);
 const ollamaByName = ref<Record<string, MeOllama|null>>({});
 
-// the clips grouped by day, newest first; index is the clip's place in the whole list
-const days = computed(() => {
-  const out: { key: string; heading: string; items: { meEvent: MeEvent; index: number }[] }[] = [];
-  fileList.value.forEach((meEvent, index) => {
-    const key = eventDay(meEvent.me_name);
-    if (out.length === 0 || out[out.length - 1]!.key !== key) out.push({ key, heading: dayHeading(key), items: [] });
-    out[out.length - 1]!.items.push({ meEvent, index });
-  });
-  return out;
-});
 
 function getAgo(meEvent:MeEvent):string {
   return(agoText(Date.now() - Utils.parseEventTime(new MeEventImp(meEvent).getLastMeEventTime())));
@@ -355,13 +344,9 @@ onBeforeUnmount(() => {
   font-size: 0.8rem;
 }
 
-.day + .day {
-  margin-top: 28px;
-}
-
-.day_heading {
-  margin: 0 0 12px;
-  font-size: 1.05rem;
+.event_day {
+  color: var(--text-muted);
+  font-size: 0.88rem;
   font-weight: 600;
 }
 
