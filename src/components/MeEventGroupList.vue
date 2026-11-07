@@ -9,46 +9,36 @@
          in sight; tap one to turn it on (filled, with a check), tap again to turn it off. "All" clears them.
          Dates and hiding people are rarely needed, so they wait under "More filters". -->
     <div class="filters">
-      <div class="chip_row" role="group" aria-label="What to show">
-        <button type="button" class="chip" :class="{ chip_on: filters.labels.length === 0 }" :aria-pressed="filters.labels.length === 0"
-          @click="showAll()">All</button>
+      <!-- every filter in one group of the same buttons: what (Cats, Dogs, ...: several at once), when (Today,
+           Yesterday, Past week: one at a time) and More (rarer dates, hiding people). Tap to turn on (orange, with a
+           check), tap again to turn off. "All" is lit when nothing is filtered, and tapping it clears every filter.
+           A rarer filter, once on, shows here as its own button with an x, so everything that's on is in sight. -->
+      <div class="chip_row" role="group" aria-label="Filters">
+        <button type="button" class="chip" :class="{ chip_on: !hasFilters(filters) }" :aria-pressed="!hasFilters(filters)"
+          @click="clearAll()">All</button>
         <button v-for="c in choices" :key="c.label" type="button" class="chip" :class="{ chip_on: filters.labels.includes(c.label) }"
           :aria-pressed="filters.labels.includes(c.label)" @click="toggle(c.label)">
-          <svg v-if="filters.labels.includes(c.label)" class="chip_tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7" /></svg>
+          <template v-if="filters.labels.includes(c.label)"><svg class="chip_tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7" /></svg></template>
           {{c.text}}
         </button>
-      </div>
-
-      <!-- only when it matters: two or more picked -->
-      <div v-if="filters.labels.length > 1" class="match" role="radiogroup" aria-label="How to combine">
-        <span class="match_label">Show clips with</span>
-        <button type="button" class="match_option" :class="{ match_on: filters.match === 'any' }" role="radio" :aria-checked="filters.match === 'any'"
-          @click="setMatch('any')">{{filters.labels.length === 2 ? 'either one' : 'any of these'}}</button>
-        <button type="button" class="match_option" :class="{ match_on: filters.match === 'all' }" role="radio" :aria-checked="filters.match === 'all'"
-          @click="setMatch('all')">{{filters.labels.length === 2 ? 'both together' : 'all together'}}</button>
-      </div>
-
-      <!-- when: a segmented control (the joined "pick one" bar phones use), so it reads as its own question,
-           apart from the animal buttons. A rarer date from More filters leaves none of these picked and says so
-           in the "Showing" line. -->
-      <div class="segments" role="radiogroup" aria-label="When">
-        <button type="button" class="segment" :class="{ segment_on: !hasDate(filters) }" role="radio" :aria-checked="!hasDate(filters)"
-          @click="setWhen('')">Any time</button>
-        <button v-for="c in mainWhen" :key="c.value" type="button" class="segment" :class="{ segment_on: filters.when === c.value }" role="radio"
-          :aria-checked="filters.when === c.value" @click="setWhen(filters.when === c.value ? '' : c.value)">{{c.text}}</button>
-      </div>
-
-      <p class="summary" aria-live="polite">
-        <span><span class="summary_label">Showing:</span> {{describe(filters)}}</span>
-        <button v-if="hasFilters(filters)" type="button" class="link" @click="clearAll()">Clear filters</button>
-        <button type="button" class="link link_more" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
-          More filters<span v-if="moreCount"> ({{moreCount}})</span>
+        <button v-for="c in mainWhen" :key="c.value" type="button" class="chip" :class="{ chip_on: filters.when === c.value }"
+          :aria-pressed="filters.when === c.value" @click="setWhen(filters.when === c.value ? '' : c.value)">
+          <template v-if="filters.when === c.value"><svg class="chip_tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17 19 7" /></svg></template>
+          {{c.text}}
+        </button>
+        <button v-if="otherDate" type="button" class="chip chip_on" :aria-label="`${dateButtonText(filters)}: tap to remove`" @click="setWhen('')">
+          {{dateButtonText(filters)}} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <button v-if="hidingPeople" type="button" class="chip chip_on" aria-label="No people: tap to remove" @click="toggleHidePeople()">
+          No people <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <button type="button" class="chip chip_more" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
+          More
           <svg :class="{ flipped: moreOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
         </button>
-      </p>
+      </div>
 
       <div v-if="moreOpen" class="more">
-        <div class="more_title">Other dates</div>
         <div class="chip_row" role="group" aria-label="More dates">
           <button v-for="c in moreWhen" :key="c.value" type="button" class="chip chip_small" :class="{ chip_on: filters.when === c.value }"
             @click="setWhen(filters.when === c.value ? '' : c.value)">{{c.text}}</button>
@@ -61,13 +51,26 @@
           <button type="button" class="btn btn_primary" :disabled="!dateFrom && !dateTo" @click="applyDates()">Show</button>
           <div class="date_hint">Leave "To" empty for just one day.</div>
         </div>
-
         <label v-if="mayHidePeople" class="switch">
           <input type="checkbox" :checked="hidingPeople" @change="toggleHidePeople()">
           <span class="switch_track" aria-hidden="true"><span class="switch_knob"></span></span>
           Hide clips with people
         </label>
       </div>
+
+      <!-- only when it matters: two or more animals picked -->
+      <div v-if="filters.labels.length > 1" class="match" role="radiogroup" aria-label="How to combine">
+        <span class="match_label">Show clips with</span>
+        <button type="button" class="match_option" :class="{ match_on: filters.match === 'any' }" role="radio" :aria-checked="filters.match === 'any'"
+          @click="setMatch('any')">{{filters.labels.length === 2 ? 'either one' : 'any of these'}}</button>
+        <button type="button" class="match_option" :class="{ match_on: filters.match === 'all' }" role="radio" :aria-checked="filters.match === 'all'"
+          @click="setMatch('all')">{{filters.labels.length === 2 ? 'both together' : 'all together'}}</button>
+      </div>
+
+      <p class="summary" aria-live="polite">
+        <span><span class="summary_label">Showing:</span> {{describe(filters)}}</span>
+        <button v-if="hasFilters(filters)" type="button" class="link" @click="clearAll()">Clear filters</button>
+      </p>
     </div>
 
     <MeEventList :meGroupText="meGroupText" :filters="filters" :key="listKey" @clear-date="setWhen('')" @clear-all="clearAll()" />
@@ -109,10 +112,9 @@ const moreWhen = WHEN_CHOICES.filter((c) => !MAIN_WHEN.includes(c.value));
 // a date chosen under More filters (Past month, picked dates)
 const otherDate = computed(() => hasDate(filters.value) && !MAIN_WHEN.includes(filters.value.when));
 
-// "More filters" (rarer dates, hiding people): closed unless asked for; the count says how many are on
+// "More" (rarer dates, hiding people): closed unless asked for
 const moreOpen = ref(false);
 const picking = ref(!!(filters.value.from || filters.value.to));
-const moreCount = computed(() => (otherDate.value ? 1 : 0) + (hidingPeople.value ? 1 : 0));
 const dateFrom = ref(filters.value.from);
 const dateTo = ref(filters.value.to === filters.value.from ? '' : filters.value.to);
 const today = localDate(new Date());
@@ -123,9 +125,6 @@ function update(change: Partial<Filters>): void {
   filtersToUrl(filters.value);
 }
 
-function showAll(): void {
-  update({ labels: [] });
-}
 function toggle(label: string): void {
   const on = filters.value.labels.includes(label);
   const labels = on ? filters.value.labels.filter((l) => l !== label) : [...filters.value.labels, label];
@@ -199,47 +198,10 @@ function clearAll(): void {
   gap: 6px;
 }
 
-.segments {
-  display: grid;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
-  max-width: 520px;
-  padding: 4px;
-  border-radius: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
 
-.segment {
-  min-height: 40px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 0.92rem;
-  font-weight: 500;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-}
 
-.segment:hover {
-  color: var(--text);
-}
 
-.segment:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
 
-.segment_on,
-.segment_on:hover {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
 
 .chip {
   flex: none;
@@ -355,6 +317,25 @@ function clearAll(): void {
 }
 
 
+.chip_more {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.chip_more[aria-expanded="true"] {
+  border-style: solid;
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.chip_more svg {
+  transition: transform 0.15s;
+}
+
+.chip_more svg.flipped {
+  transform: rotate(180deg);
+}
+
 .chip_small {
   min-height: 40px;
   padding: 0 14px;
@@ -380,17 +361,8 @@ function clearAll(): void {
   text-underline-offset: 3px;
 }
 
-.link_more {
-  color: var(--text-muted);
-}
 
-.link_more svg {
-  transition: transform 0.15s;
-}
 
-.link_more svg.flipped {
-  transform: rotate(180deg);
-}
 
 .more {
   display: grid;
@@ -401,13 +373,6 @@ function clearAll(): void {
   background: var(--surface);
 }
 
-.more_title {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 
 .date_pick {
   display: flex;
