@@ -16,10 +16,10 @@ export interface MeOllama {
   [label:string]:boolean|string|Record<string, boolean>|null|undefined;
 }
 
-// Every classification an event can have, in the order they are offered
+// Every classification offered in the app, in order. The AI also answers "legs" (a person's legs or feet,
+// when it isn't sure it's a whole person); people see that as "person" (see userLabels), so it isn't offered.
 export const CLASSIFICATIONS:{label:string, description:string}[] = [
-  { label: 'person', description: 'A person, or any part of one' },
-  { label: 'legs', description: "A person's legs or feet" },
+  { label: 'person', description: 'A person, or any part of one (legs, feet)' },
   { label: 'cat', description: 'A cat' },
   { label: 'dog', description: 'A dog' },
   { label: 'raccoon', description: 'A raccoon' },
@@ -27,12 +27,23 @@ export const CLASSIFICATIONS:{label:string, description:string}[] = [
   { label: 'delivery', description: 'A delivery person brought something to the house' },
 ];
 
-// The labels to show for an event: the true ones, less the ones that add nothing. "animal" adds
-// nothing when a specific animal was found, nor "legs" when a person was.
+// Labels the AI uses that people see as another one: "legs" is a person
+export const SAME_AS:Record<string, string> = { legs: 'person' };
+
+// The true labels as people see them: "legs" becomes "person", without repeats
+export function userLabels(ollama:MeOllama|Record<string, boolean>|null|undefined):string[] {
+  const out:string[] = [];
+  for (const l of trueLabels(ollama as MeOllama)) {
+    const u = SAME_AS[l] ?? l;
+    if(!out.includes(u)) out.push(u);
+  }
+  return(out);
+}
+
+// The labels to show for an event: as people see them, less "animal" when a specific animal was found
 export function displayLabels(ollama:MeOllama|null|undefined):string[] {
-  let tags = trueLabels(ollama);
-  if(tags.some((t) => t !== 'animal' && t !== 'person' && t !== 'legs')) tags = tags.filter((t) => t !== 'animal');
-  if(tags.includes('person')) tags = tags.filter((t) => t !== 'legs');
+  let tags = userLabels(ollama);
+  if(tags.some((t) => t !== 'animal' && t !== 'person')) tags = tags.filter((t) => t !== 'animal');
   return(tags);
 }
 

@@ -30,7 +30,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { CatCamServices, CMO_SERVER } from '../ts/catcamservices';
 import type { MeEvent } from '../ts/meevent';
-import { CLASSIFICATIONS, trueLabels, type MeOllama } from '../ts/meollama';
+import { CLASSIFICATIONS, SAME_AS, userLabels, type MeOllama } from '../ts/meollama';
 import { Utils } from '../ts/utils';
 
 const props = defineProps<{
@@ -43,14 +43,14 @@ const emit = defineEmits<{
   saved: [ollama: MeOllama];
 }>();
 
-// every known classification, plus any other label the event already has
+// every known classification, plus any other label the event already has ("legs" shows as "person")
 const options = [
   ...CLASSIFICATIONS,
   ...Object.keys(props.ollama ?? {})
-    .filter((label) => !label.startsWith('me_') && !CLASSIFICATIONS.some((c) => c.label === label))
+    .filter((label) => !label.startsWith('me_') && !SAME_AS[label] && !CLASSIFICATIONS.some((c) => c.label === label))
     .map((label) => ({ label, description: '' })),
 ];
-const initial = trueLabels(props.ollama);
+const initial = userLabels(props.ollama);
 const selected = ref<string[]>([...initial]);
 const saving = ref(false);
 const saveError = ref("");
@@ -60,7 +60,7 @@ const changed = computed(() => selected.value.length !== initial.length || selec
 
 // what ollama said, once someone has changed it; undefined when it hasn't been changed
 const ollamaSaid = computed(() => props.ollama && 'me_ollama_original' in props.ollama
-  ? trueLabels(props.ollama.me_ollama_original)
+  ? userLabels(props.ollama.me_ollama_original)
   : undefined);
 
 onMounted(() => nextTick(() => optionsEl.value?.querySelector('input')?.focus()));
@@ -73,6 +73,9 @@ function save():void {
   if(selected.value.length === 0) return;
   let labels: Record<string, boolean> = {};
   for (let option of options) labels[option.label] = selected.value.includes(option.label);
+  // "person" stands for the AI's "legs" too: unticked clears both, ticked keeps legs as it was
+  for (const [ai, shown] of Object.entries(SAME_AS))
+    labels[ai] = labels[shown] ? props.ollama?.[ai] === true : false;
 
   saving.value = true;
   saveError.value = "";
