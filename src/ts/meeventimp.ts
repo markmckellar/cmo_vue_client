@@ -53,6 +53,8 @@ export class MeEventImp implements MeEvent {
       public me_rep_image:string;
       public me_json_name:string;
       public me_frame_count?:number;
+      public me_first_event_time?:string;
+      public me_last_event_time?:string;
   
 
       constructor(meEvent:MeEvent) {
@@ -67,10 +69,13 @@ export class MeEventImp implements MeEvent {
         this.me_rep_image = meEvent.me_rep_image;
         this.me_json_name = meEvent.me_json_name;
         this.me_frame_count = meEvent.me_frame_count;
+        this.me_first_event_time = meEvent.me_first_event_time;
+        this.me_last_event_time = meEvent.me_last_event_time;
     }
 
 
       public getFirstMeEventTime():string {
+        if(this.me_first_event_time) return(this.me_first_event_time);    // a brief event
         let firstTime = "";
         if(this.me_delta_array.length>0) {
             firstTime = this.me_delta_array[0].event_time_iso;
@@ -80,6 +85,7 @@ export class MeEventImp implements MeEvent {
     }
 
     public getLastMeEventTime():string {
+        if(this.me_last_event_time) return(this.me_last_event_time);    // a brief event
         let lastTime = "";
         if(this.me_delta_array.length>0) {
             lastTime = this.me_delta_array[this.me_delta_array.length-1].event_time_iso;

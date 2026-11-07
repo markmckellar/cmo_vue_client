@@ -15,4 +15,7 @@ export interface MeEvent {
   me_json_name:string;
   // frames in the movie, when the camera reports it (porch_cam); otherwise count me_delta_array
   me_frame_count?:number;
+  // a brief event (search results) has these instead of me_delta_array, which can be hundreds of KB
+  me_first_event_time?:string;
+  me_last_event_time?:string;
 }

@@ -94,7 +94,9 @@ export class CatCamServices {
       howMayRecords:number,
       minimumDuration:number,
       before?:string): Promise<MeEvent[]> {
-    let url = `${this.catCamUrl}catcam/search/${meGroup}?howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}`;
+    // brief: without me_delta_array (one entry per frame, up to ~650 KB for a long night clip), with its
+    // count and first and last times instead
+    let url = `${this.catCamUrl}catcam/search/${meGroup}?howMayRecords=${howMayRecords}&minimumDuration=${minimumDuration}&brief=true`;
     const query = filtersToQuery(filters);
     if(query) url += '&' + query;
     if(before) url += `&before=${encodeURIComponent(before)}`;
@@ -102,8 +104,17 @@ export class CatCamServices {
 
     return apiFetch(url)
       .then((res) => res.json())
-      .then((res) => res.map((meEvent: any) => this.formatMeEvent(meEvent)));
+      .then((res) => res.map((meEvent: any) => this.formatBriefMeEvent(meEvent)));
     }
+
+  // A brief event as the rest of the app expects it: no deltas, the frame count from me_delta_count
+  public formatBriefMeEvent(meEvent:any):MeEvent {
+    if(!Array.isArray(meEvent.me_delta_array)) {
+      meEvent.me_delta_array = [];
+      if(meEvent.me_frame_count === undefined && meEvent.me_delta_count !== undefined) meEvent.me_frame_count = meEvent.me_delta_count;
+    }
+    return(this.formatMeEvent(meEvent));
+  }
 
   // Ollama's classification of the event (cat, dog, person, ...). null if the event has none.
   public getMeOllama(meEvent:MeEvent): Promise<MeOllama|null> {
