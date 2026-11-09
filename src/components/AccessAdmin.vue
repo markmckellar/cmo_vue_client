@@ -48,7 +48,8 @@
           <input v-model="search" type="search" class="acc_input" placeholder="Filter by email" aria-label="Filter people by email" />
         </div>
         <div class="acc_table" role="table" aria-label="People">
-          <div v-for="person in shownPeople" :key="person.email" class="acc_card acc_person" role="row">
+          <div v-for="person in shownPeople" :key="person.email" :id="personId(person.email)" class="acc_card acc_person"
+            :class="{ acc_flash: flashed === person.email }" role="row">
             <div class="acc_who" role="cell">
               <b>{{ person.email }}</b>
               <span v-if="person.admin" class="acc_badge acc_badge_admin">Admin · sees everything</span>
@@ -96,7 +97,8 @@
               <span class="acc_chips">
                 <span v-if="g.view_only" class="acc_badge">View only</span>
                 <span v-else class="acc_badge acc_badge_ok">Can relabel</span>
-                <span v-for="m in g.members" :key="m" class="acc_badge acc_badge_person">{{ m }}</span>
+                <button v-for="m in g.members" :key="m" type="button" class="acc_badge acc_badge_person"
+                  :title="'Go to ' + m + ' (move them, give them own rules, remove access)'" @click="goToPerson(m)">{{ m }}</button>
                 <span v-if="!g.members.length" class="acc_muted">no people</span>
                 <span v-for="d in devicesOf(g.id)" :key="d.id" class="acc_badge" :title="d.role === 'reader' ? 'A script that sees what this group sees' : 'A camera that uploads here (not limited by these rules)'">
                   device: {{ d.id }}</span>
@@ -191,6 +193,16 @@ const note = ref('');
 const noteBad = ref(false);
 const pick = reactive<Record<string, string>>({});    // the group picked for each person (email -> group id)
 const search = ref('');
+
+// clicking a name in a group card: show that person's row under People (clearing a filter that hides them) and flash it
+const flashed = ref('');
+const personId = (email: string) => 'person-' + email.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+function goToPerson(email: string) {
+  if (search.value && !email.toLowerCase().includes(search.value.trim().toLowerCase())) search.value = '';
+  flashed.value = email;
+  requestAnimationFrame(() => document.getElementById(personId(email))?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  setTimeout(() => { if (flashed.value === email) flashed.value = ''; }, 2500);
+}
 const newEmail = ref('');
 const newEmailGroup = ref('__own');
 const editing = ref<GroupDraft | null>(null);
@@ -640,7 +652,10 @@ async function saveHomes() {
 .acc_badge { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 0.78rem; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-muted); }
 .acc_badge_ok { color: #2fb47c; border-color: #2fb47c; }
 .acc_badge_admin { color: var(--accent); border-color: var(--accent); align-self: flex-start; }
-.acc_badge_person { color: var(--text); }
+.acc_badge_person { color: var(--text); font: inherit; font-size: 0.78rem; cursor: pointer; }
+.acc_badge_person:hover { border-color: var(--accent); color: var(--accent); }
+.acc_badge_person:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acc_flash { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.35); transition: box-shadow 0.3s; }
 .acc_group_open { border-color: var(--accent); }
 .acc_home_line { display: flex; gap: 10px; flex-wrap: wrap; padding: 2px 0; }
 .acc_home_edit { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
