@@ -99,7 +99,7 @@ The `deploy` script builds the app and copies `dist/` there. It first removes th
 
 ```
 nvm use
-./deploy                                   # expects cmo_server at ~/dev/cmo_server
+./deploy                                   # expects cmo_server beside this repo
 CMO_SERVER=/path/to/cmo_server ./deploy    # or say where it is
 ```
 
@@ -107,9 +107,9 @@ To do the same by hand:
 
 ```
 npm run build
-cd ~/dev/cmo_server/src/main/resources/static/cmo_client
-rm -rf assets js css index.html favicon.ico
-cp -R ~/dev/cmo_vue_client_newdev/dist/* .
+dest=../cmo_server/src/main/resources/static/cmo_client
+rm -rf $dest/assets $dest/js $dest/css $dest/index.html $dest/favicon.ico
+cp -R dist/* $dest/
 ```
 
 Then commit cmo_server, rebuild it and restart it on the server (see its README). The app is then at:

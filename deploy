@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Build the app and copy it into cmo_server, which serves it at /cmo_client/index.html.
-# Usage: ./deploy            (cmo_server checked out at ~/dev/cmo_server)
+# Usage: ./deploy            (cmo_server checked out beside this repo)
 #        CMO_SERVER=/path/to/cmo_server ./deploy
 set -e
 
-CMO_SERVER="${CMO_SERVER:-$HOME/dev/cmo_server}"
+CMO_SERVER="${CMO_SERVER:-$(cd "$(dirname "$0")/.." && pwd)/cmo_server}"
 DEST="$CMO_SERVER/src/main/resources/static/cmo_client"
 
 if [ ! -d "$CMO_SERVER/src/main/resources/static" ]; then
