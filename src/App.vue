@@ -10,15 +10,18 @@
       <h1 class="app_title">Home Cams</h1>
       <nav v-if="me" class="app_user">
         <span class="app_user_name" :title="me.email">{{ me.name || me.email }}</span>
-        <a v-if="me.admin" :href="CMO_SERVER + 'admin.html'"
-          :title="pending ? pending + ' waiting for approval' : undefined">Access<span v-if="pending" class="app_pending">{{ pending }}</span></a>
+        <a v-if="me.admin" href="#/access" :class="{ app_here: onAccess }"
+          :title="pending ? pending + ' waiting for approval' : 'Who can see what'">Access<span v-if="pending" class="app_pending">{{ pending }}</span></a>
         <button type="button" class="app_signout" @click="signOut">Sign out</button>
       </nav>
     </div>
   </header>
 
   <main class="app_main">
-    <MeGroupList />
+    <!-- the admin's access page (#/access); the cameras stay mounted underneath so going back keeps their place -->
+    <AccessAdmin v-if="onAccess && me?.admin" />
+    <p v-else-if="onAccess && meLoaded" class="app_denied">Only admins can see the access page. <a href="#/">Back to the cameras</a></p>
+    <MeGroupList v-show="!onAccess" />
   </main>
 
   <!-- an event opened from a link (Telegram alerts) plays on top of the list -->
@@ -28,10 +31,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { me, loadMe } from './ts/me';
 import MeGroupList from './components/MeGroupList.vue';
 import LinkedEvent from './components/LinkedEvent.vue';
+import AccessAdmin from './components/AccessAdmin.vue';
 import { CMO_SERVER } from './ts/catcamservices';
 import { eventLinkFromHash } from './ts/eventlink';
 
@@ -54,14 +58,23 @@ async function signOut() {
   await fetch(CMO_SERVER + 'auth/logout', { method: 'POST', credentials: 'same-origin' });
   window.location.href = CMO_SERVER + 'signin.html';
 }
+// which page: #/access is the admin's access page, anything else the cameras
+const hash = ref(window.location.hash);
+window.addEventListener('hashchange', () => { hash.value = window.location.hash; });
+const onAccess = computed(() => hash.value === '#/access');
+// back on the cameras after changing access: the waiting count may have changed
+watch(onAccess, (now) => { if (!now) loadPending(); });
+
 // who is signed in, for the header (and what the event player offers)
+const meLoaded = ref(false);
 onMounted(async () => {
   await loadMe();
+  meLoaded.value = true;
   loadPending();
 });
 
 // for an admin, how many people are waiting for approval, shown on the Access link;
-// checked again whenever the tab comes back into view (after approving someone in admin.html, say)
+// checked again whenever the tab comes back into view, and on leaving the access page
 const pending = ref(0);
 async function loadPending() {
   if (!me.value?.admin) return;
@@ -122,7 +135,20 @@ onMounted(async () => {
 
 /* a narrow phone: just Access and Sign out, so the header stays on one line */
 @media (max-width: 480px) {
-  .app_user_name {
+  .app_here {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.app_denied {
+  color: var(--text-muted);
+}
+
+.app_denied a {
+  color: var(--accent);
+}
+
+.app_user_name {
     display: none;
   }
 }
